@@ -1,0 +1,58 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.5",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "M_LoAW_GameGrid",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"M_LoAW_GridData"
+			]
+		},
+		{
+			"Name": "M_LoAW_GridData",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"LoAW_GridDataCreator",
+				"Engine"
+			]
+		},
+		{
+			"Name": "M_LoAW_Terrain",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"M_LoAW_GridData"
+			]
+		},
+		{
+			"Name": "M_LoAW_GameBase",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
+			"Name": "LoAW_GridDataCreator",
+			"Enabled": true
+		},
+		{
+			"Name": "LoAW_Asset",
+			"Enabled": true
+		}
+	]
+}
