@@ -189,7 +189,7 @@ void AGridDataCreator::SpiralCreateCenter()
 				if (SaveLoopFlag) {
 					return;
 				}
-				AddRingPointAndIndex();
+				AddRingPointAndIndex(i);
 				FindNeighborPointOfRing(j);
 
 				ProgressCurrent = SpiralCreateCenterLoopData.Count;
@@ -225,9 +225,12 @@ void AGridDataCreator::InitGridRing(int32 Radius)
 {
 }
 
-int32 AGridDataCreator::AddRingPointAndIndex()
+int32 AGridDataCreator::AddRingPointAndIndex(int32 Range)
 {
-	return 0;
+	FStructGridData Data;
+	Data.RangeFromCenter = Range;
+	int32 Index = Points.Add(Data);
+	return Index;
 }
 
 void AGridDataCreator::FindNeighborPointOfRing(int32 DirIndex)
@@ -397,6 +400,8 @@ void AGridDataCreator::WritePointLine(std::ofstream& ofs, int32 Index)
 	WriteAxialCoord(ofs, Data);
 	WritePipeDelimiter(ofs);
 	WritePosition2D(ofs, Data);
+	WritePipeDelimiter(ofs);
+	WriteRange(ofs, Data);
 	WriteLineEnd(ofs);
 }
 
@@ -415,6 +420,13 @@ void AGridDataCreator::WritePosition2D(std::ofstream& ofs, const FStructGridData
 	FString Str = FloatToString(Pos2D.X, 2);
 	Str.Append(*CommaDelim);
 	Str.Append(FloatToString(Pos2D.Y, 2));
+	ofs << TCHAR_TO_ANSI(*Str);
+}
+
+void AGridDataCreator::WriteRange(std::ofstream& ofs, const FStructGridData& Data)
+{
+	int32 Range = Data.RangeFromCenter;
+	FString Str = FString::FromInt(Range);
 	ofs << TCHAR_TO_ANSI(*Str);
 }
 

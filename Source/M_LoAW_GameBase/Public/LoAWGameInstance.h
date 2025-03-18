@@ -19,8 +19,12 @@ class M_LOAW_GAMEBASE_API ULoAWGameInstance : public UGameInstance
 public:
 	TMap<FIntPoint, int32> GameGridPointIndices;
 	TArray<FStructGridData> GameGridPoints;
+	FStructGridDataParam GameGridParam;
+	bool hasGameGridLoaded = false;
 
 	TMap<FIntPoint, int32> TerrainGridPointIndices;
 	TArray<FStructGridData> TerrainGridPoints;
+	FStructGridDataParam TerrainGridParam;
+	bool hasTerrainGridLoaded = false;
 	
 };

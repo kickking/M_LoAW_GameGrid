@@ -23,6 +23,14 @@ bool AGameGridLoader::ParseParamsByChild(int32 StartIndex, TArray<FString>& StrA
 	return true;
 }
 
+void AGameGridLoader::SetParams()
+{
+	pGI->GameGridParam.GridRange = GridRange;
+	pGI->GameGridParam.NeighborRange = NeighborRange;
+	pGI->GameGridParam.PointsNum = PointsNum;
+	pGI->GameGridParam.TileSize = TileSize;
+}
+
 void AGameGridLoader::InitProgressTotal()
 {
 	Super::InitProgressTotal();
@@ -41,6 +49,7 @@ void AGameGridLoader::ParsePointLine(const FString& line)
 	FStructGridData Data;
 	ParseAxialCoord(StrArr[0], Data);
 	ParsePosition2D(StrArr[1], Data);
+	ParseRange(StrArr[2], Data);
 	AddPoint(Data);
 }
 
@@ -93,5 +102,10 @@ void AGameGridLoader::CreatePointVertices(int32 Index)
 void AGameGridLoader::AddPosition2D(int32 Index, FVector2D Position2D)
 {
 	pGI->GameGridPoints[Index].VerticesPostion2D.Add(Position2D);
+}
+
+void AGameGridLoader::DoWorkFlowDone()
+{
+	pGI->hasGameGridLoaded = true;
 }
 

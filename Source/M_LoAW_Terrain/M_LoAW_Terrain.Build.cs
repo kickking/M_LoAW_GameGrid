@@ -10,7 +10,7 @@ public class M_LoAW_Terrain : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "M_LoAW_GridData" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "M_LoAW_GridData", "M_LoAW_GameBase", "FastNoiseGenerator", "FastNoise", "ProceduralMeshComponent" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

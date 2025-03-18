@@ -25,6 +25,7 @@ protected:
 
 protected:
 	virtual bool ParseParamsByChild(int32 StartIndex, TArray<FString>& StrArr) override;
+	virtual void SetParams() override;
 
 	virtual void ParsePointLine(const FString& line) override;
 	virtual void AddPointIndex(FIntPoint key, int32 value) override;
@@ -33,5 +34,7 @@ protected:
 
 	virtual void AddNeighbors(int32 Index, FStructGridDataNeighbors Neighbors) override;
 	virtual bool PointIndicesContains(FIntPoint Point) override;
+
+	virtual void DoWorkFlowDone() override;
 
 };

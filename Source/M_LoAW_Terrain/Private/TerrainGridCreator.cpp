@@ -21,9 +21,9 @@ void ATerrainGridCreator::InitGridRing(int32 Radius)
 	TmpPosition2D.Set(Vec.X, Vec.Y);
 }
 
-int32 ATerrainGridCreator::AddRingPointAndIndex()
+int32 ATerrainGridCreator::AddRingPointAndIndex(int32 Range)
 {
-	int32 Index = Super::AddRingPointAndIndex();
+	int32 Index = Super::AddRingPointAndIndex(Range);
 	Points[Index].Position2D.Set(TmpPosition2D.X, TmpPosition2D.Y);
 	return Index;
 }

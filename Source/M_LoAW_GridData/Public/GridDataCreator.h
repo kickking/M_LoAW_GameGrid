@@ -114,7 +114,7 @@ protected:
 	virtual void SpiralCreateCenter();
 	virtual void InitGridCenter();
 	virtual void InitGridRing(int32 Radius);
-	virtual int32 AddRingPointAndIndex();
+	virtual int32 AddRingPointAndIndex(int32 Range);
 	virtual void FindNeighborPointOfRing(int32 DirIndex);
 
 	virtual void SpiralCreateNeighbors();
@@ -127,6 +127,7 @@ protected:
 	virtual void WritePointLine(std::ofstream& ofs, int32 Index);
 	virtual void WriteAxialCoord(std::ofstream& ofs, const FStructGridData& Data);
 	virtual void WritePosition2D(std::ofstream& ofs, const FStructGridData& Data);
+	virtual void WriteRange(std::ofstream& ofs, const FStructGridData& Data);
 
 	virtual void WriteNeighborsToFile();
 	virtual int32 CalNeighborsWeight(int32 Range);

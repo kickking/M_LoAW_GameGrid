@@ -25,7 +25,7 @@ public:
 
 protected:
 	virtual void InitGridRing(int32 Radius) override;
-	virtual int32 AddRingPointAndIndex() override;
+	virtual int32 AddRingPointAndIndex(int32 Range) override;
 	virtual void FindNeighborPointOfRing(int32 DirIndex) override;
 
 	virtual void WriteParamsContentByChild(std::ofstream& ofs) override;

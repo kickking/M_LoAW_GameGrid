@@ -19,6 +19,8 @@ public:
 	void Set(const QuadCoord& Coord);
 };
 
+#define QUAD_SIDE_NUM 4
+
 /**
  *
  */
@@ -47,10 +49,12 @@ public:
 	QuadCoord GetCoord();
 
 	static Quad Add(const Quad& InQuadA, const Quad& InQuadB);
+	static Quad Subtract(const Quad& InQuadA, const Quad& InQuadB);
 	static Quad Scale(const Quad& InQuad, float Factor);
 	static Quad NeighborDirection(int32 Direction);
 	static Quad DiagonalDirection(int32 Direction);
 	static Quad Neighbor(const Quad& InQuad, int32 direction);
+	static int32 Distance(const Quad& InQuadA, const Quad& InQuadB);
 
 	~Quad();
 };

@@ -30,6 +30,7 @@ public:
 
 protected:
 	virtual bool ParseParamsByChild(int32 StartIndex, TArray<FString>& StrArr) override;
+	virtual void SetParams() override;
 
 	virtual void InitProgressTotal() override;
 
@@ -45,4 +46,6 @@ protected:
 	virtual void InitPointVerticesVertors() override;
 	virtual void CreatePointVertices(int32 Index) override;
 	virtual void AddPosition2D(int32 Index, FVector2D Position2D) override;
+
+	virtual void DoWorkFlowDone() override;
 };

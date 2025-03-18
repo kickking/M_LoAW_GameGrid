@@ -18,14 +18,13 @@ void AQuadGridCreator::InitGridRing(int32 Radius)
 	TmpQuad = Quad::Add(quad, Quad(Points[0].AxialCoord));
 }
 
-int32 AQuadGridCreator::AddRingPointAndIndex()
+int32 AQuadGridCreator::AddRingPointAndIndex(int32 Range)
 {
-	FStructGridData Data;
-	Data.AxialCoord.X = TmpQuad.GetCoord().X;
-	Data.AxialCoord.Y = TmpQuad.GetCoord().Y;
-	int32 Index = Points.Add(Data);
+	int32 Index = Super::AddRingPointAndIndex(Range);
+	Points[Index].AxialCoord.X = TmpQuad.GetCoord().X;
+	Points[Index].AxialCoord.Y = TmpQuad.GetCoord().Y;
 
-	PointIndices.Add(FIntPoint(Data.AxialCoord.X, Data.AxialCoord.Y), Index);
+	PointIndices.Add(FIntPoint(Points[Index].AxialCoord.X, Points[Index].AxialCoord.Y), Index);
 	return Index;
 }
 

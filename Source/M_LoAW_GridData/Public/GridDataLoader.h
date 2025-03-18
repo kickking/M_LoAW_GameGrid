@@ -26,8 +26,6 @@ enum class Enum_GridDataLoaderState : uint8
 	Error
 };
 
-class ULoAWGameInstance;
-
 UCLASS()
 class M_LOAW_GRIDDATA_API AGridDataLoader : public AActor
 {
@@ -51,7 +49,7 @@ protected:
 	int32 ProgressPassed = 0;
 	int32 ProgressCurrent = 0;
 
-	ULoAWGameInstance* pGI;
+	class ULoAWGameInstance* pGI;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
@@ -119,6 +117,7 @@ protected:
 	virtual void LoadParams();
 	virtual bool ParseParams(const FString& line);
 	virtual bool ParseParamsByChild(int32 StartIndex, TArray<FString>& StrArr);
+	virtual void SetParams();
 
 	virtual void InitProgress();
 	virtual void InitProgressTotal();
@@ -133,6 +132,7 @@ protected:
 	virtual void ParsePointLine(const FString& line);
 	virtual void ParseAxialCoord(const FString& Str, FStructGridData& Data);
 	virtual void ParsePosition2D(const FString& Str, FStructGridData& Data);
+	virtual void ParseRange(const FString& Str, FStructGridData& Data);
 	virtual void AddPoint(FStructGridData Data);
 
 	virtual void LoadNeighborsFromFile();
@@ -147,6 +147,8 @@ protected:
 	virtual void InitPointVerticesVertors();
 	virtual void CreatePointVertices(int32 Index);
 	virtual void AddPosition2D(int32 Index, FVector2D Position2D);
+
+	virtual void DoWorkFlowDone();
 
 protected:
 	void LoadDataFromFile(const FString& FileName, FStructLoopData* pLoopData,

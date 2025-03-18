@@ -22,6 +22,14 @@ bool ATerrainGridLoader::ParseParamsByChild(int32 StartIndex, TArray<FString>& S
 	return true;
 }
 
+void ATerrainGridLoader::SetParams()
+{
+	pGI->TerrainGridParam.GridRange = GridRange;
+	pGI->TerrainGridParam.NeighborRange = NeighborRange;
+	pGI->TerrainGridParam.PointsNum = PointsNum;
+	pGI->TerrainGridParam.TileSize = TileSize;
+}
+
 void ATerrainGridLoader::ParsePointLine(const FString& line)
 {
 	TArray<FString> StrArr;
@@ -29,6 +37,7 @@ void ATerrainGridLoader::ParsePointLine(const FString& line)
 	FStructGridData Data;
 	ParseAxialCoord(StrArr[0], Data);
 	ParsePosition2D(StrArr[1], Data);
+	ParseRange(StrArr[2], Data);
 	AddPoint(Data);
 }
 
@@ -50,4 +59,9 @@ void ATerrainGridLoader::AddNeighbors(int32 Index, FStructGridDataNeighbors Neig
 bool ATerrainGridLoader::PointIndicesContains(FIntPoint Point)
 {
 	return pGI->TerrainGridPointIndices.Contains(Point);
+}
+
+void ATerrainGridLoader::DoWorkFlowDone()
+{
+	pGI->hasTerrainGridLoaded = true;
 }

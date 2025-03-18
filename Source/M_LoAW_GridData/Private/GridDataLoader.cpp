@@ -71,6 +71,7 @@ void AGridDataLoader::DoWorkFlow()
 		CreatePointsVertices();
 		break;
 	case Enum_GridDataLoaderState::Done:
+		DoWorkFlowDone();
 		break;
 	case Enum_GridDataLoaderState::Error:
 		UE_LOG(GridDataLoader, Warning, TEXT("%s: DoWorkFlow Error!"), *LoaderName);
@@ -312,12 +313,17 @@ bool AGridDataLoader::ParseParams(const FString& line)
 	if (!ParseParamsByChild(3, StrArr)) {
 		return false;
 	}
+	SetParams();
 	return true;
 }
 
 bool AGridDataLoader::ParseParamsByChild(int32 StartIndex, TArray<FString>& StrArr)
 {
 	return true;
+}
+
+void AGridDataLoader::SetParams()
+{
 }
 
 void AGridDataLoader::InitProgress()
@@ -400,6 +406,11 @@ void AGridDataLoader::ParseAxialCoord(const FString& Str, FStructGridData& Data)
 void AGridDataLoader::ParsePosition2D(const FString& Str, FStructGridData& Data)
 {
 	ParseVector2D(Str, Data.Position2D);
+}
+
+void AGridDataLoader::ParseRange(const FString& Str, FStructGridData& Data)
+{
+	ParseInt(Str, Data.RangeFromCenter);
 }
 
 void AGridDataLoader::AddPoint(FStructGridData Data)
@@ -537,5 +548,9 @@ void AGridDataLoader::CreatePointVertices(int32 Index)
 }
 
 void AGridDataLoader::AddPosition2D(int32 Index, FVector2D Position2D)
+{
+}
+
+void AGridDataLoader::DoWorkFlowDone()
 {
 }

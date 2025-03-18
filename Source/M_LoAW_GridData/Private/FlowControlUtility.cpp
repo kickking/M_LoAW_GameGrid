@@ -2,7 +2,6 @@
 
 
 #include "FlowControlUtility.h"
-#include "GridDataStructDefine.h"
 
 FlowControlUtility::FlowControlUtility()
 {
@@ -40,3 +39,5 @@ void FlowControlUtility::SaveLoopData(AActor* Owner, FStructLoopData& InOut_Data
 		Out_Success = false;
 	}
 }
+
+

@@ -57,14 +57,26 @@ struct FStructGridData
 	TArray<FVector2D> VerticesPostion2D = {};
 
 	UPROPERTY(BlueprintReadOnly)
-	float PositionZ = 0.0;
-
-	UPROPERTY(BlueprintReadOnly)
-	TArray<float> VerticesPositionZ;
-
-	UPROPERTY(BlueprintReadOnly)
-	FVector Normal = FVector();
-
-	UPROPERTY(BlueprintReadOnly)
 	TArray<FStructGridDataNeighbors> Neighbors;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 RangeFromCenter = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FStructGridDataParam
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 GridRange = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 NeighborRange = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 PointsNum = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	float TileSize = 0.0;
 };

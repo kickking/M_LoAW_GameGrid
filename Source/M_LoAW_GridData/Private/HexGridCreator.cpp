@@ -18,14 +18,13 @@ void AHexGridCreator::InitGridRing(int32 Radius)
 	TmpHex = Hex::Add(hex, Hex(Points[0].AxialCoord));
 }
 
-int32 AHexGridCreator::AddRingPointAndIndex()
+int32 AHexGridCreator::AddRingPointAndIndex(int32 Range)
 {
-	FStructGridData Data;
-	Data.AxialCoord.X = TmpHex.GetCoord().Q;
-	Data.AxialCoord.Y = TmpHex.GetCoord().R;
-	int32 Index = Points.Add(Data);
+	int32 Index = Super::AddRingPointAndIndex(Range);
+	Points[Index].AxialCoord.X = TmpHex.GetCoord().Q;
+	Points[Index].AxialCoord.Y = TmpHex.GetCoord().R;
 
-	PointIndices.Add(FIntPoint(Data.AxialCoord.X, Data.AxialCoord.Y), Index);
+	PointIndices.Add(FIntPoint(Points[Index].AxialCoord.X, Points[Index].AxialCoord.Y), Index);
 	return Index;
 }
 
