@@ -70,6 +70,9 @@ void ATerrainGenerator::DoWorkFlow()
 	case Enum_TerrainGeneratorState::DigRiverLine:
 		CreateRiver();
 		break;
+	case Enum_TerrainGeneratorState::CreateVertexColorsForAMTB:
+		CreateVertexColorsForAMTB();
+		break;
 	case Enum_TerrainGeneratorState::CreateTriangles:
 		CreateTriangles();
 		break;
@@ -171,6 +174,8 @@ void ATerrainGenerator::InitLoopData()
 	FlowControlUtility::InitLoopData(UpperRiverDivideLoopData);
 	FlowControlUtility::InitLoopData(LowerRiverDivideLoopData);
 
+	FlowControlUtility::InitLoopData(CreateVertexColorsForAMTBLoopData);
+
 	FlowControlUtility::InitLoopData(CreateTrianglesLoopData);
 	FlowControlUtility::InitLoopData(CalNormalsInitLoopData);
 	FlowControlUtility::InitLoopData(CalNormalsAccLoopData);
@@ -266,7 +271,6 @@ void ATerrainGenerator::CreateVertices()
 		TerrainMeshPointsIndices.Add(FIntPoint(X, Y), i);
 		CreateVertex(X, Y, RatioStd, Ratio);
 		CreateUV(X, Y);
-		CreateVertexColorsForAMTB(RatioStd, X, Y);
 
 		Progress = ProgressPassed + (float)CreateVerticesLoopData.Count / (float)StepTotalCount * ProgressWeight_CreateVertices;
 		Count++;
@@ -361,17 +365,7 @@ float ATerrainGenerator::GetWaterRatio(float X, float Y)
 	FStructHeightMapping mapping;
 	MappingByLevel(WaterLevel, WaterRangeMapping, mapping);
 	float ratio = GetMappingHeightRatio(Noise->NWWater, mapping, X, Y, WaterSampleScale);
-
-	//calculate water bank
-	/*ratio = ratio > 0.0 ? 0.0 : ratio;
-	ratio = FMath::Abs<float>(ratio);
-	float alpha = ratio * WaterBankSharpness;
-	alpha = FMath::Clamp<float>(alpha, 0.0, 1.0);
-	float exp = FMath::Lerp<float>(3.0, 1.0, alpha);
-	ratio = -FMath::Pow(ratio, exp);*/
-
 	ratio = CalWaterBank(ratio);
-
 	return ratio;
 }
 
@@ -420,15 +414,6 @@ void ATerrainGenerator::CreateUV(float X, float Y)
 	float UVy = Y * UVScale;
 	UVs.Add(FVector2D(UVx, UVy));
 	UV1.Add(FVector2D(1.0, 0.0));
-}
-
-//Create vertex Color(R:Altidude G:Moisture B:Temperature A:Biomes)
-void ATerrainGenerator::CreateVertexColorsForAMTB(float RatioStd, float X, float Y)
-{
-	float Moisture = GetNoise2DStd(Noise->NWMoisture, X, Y, MoistureSampleScale, MoistureValueScale);
-	float Temperature = GetNoise2DStd(Noise->NWTemperature, X, Y, TemperatureSampleScale, TemperatureValueScale);
-	float Biomes = GetNoise2DStd(Noise->NWBiomes, X, Y, BiomesSampleScale, BiomesValueScale);
-	VertexColors.Add(FLinearColor(RatioStd, Moisture, Temperature, Biomes));
 }
 
 float ATerrainGenerator::GetNoise2DStd(UFastNoiseWrapper* NWP, float X, float Y, 
@@ -918,7 +903,7 @@ void ATerrainGenerator::DigRiverLine()
 	}
 
 	FTimerHandle TimerHandle;
-	WorkflowState = Enum_TerrainGeneratorState::CreateTriangles;
+	WorkflowState = Enum_TerrainGeneratorState::CreateVertexColorsForAMTB;
 	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
 	UE_LOG(TerrainGenerator, Log, TEXT("DigRiverLine done."));
 }
@@ -1012,6 +997,31 @@ int32 ATerrainGenerator::GetPointsDistance(int32 Index1, int32 Index2)
 	Quad quad1(GetPointAxialCoord(Index1));
 	Quad quad2(GetPointAxialCoord(Index2));
 	return Quad::Distance(quad1, quad2);
+}
+
+void ATerrainGenerator::CreateVertexColorsForAMTB()
+{
+	if (TerrainMeshPointsLoopFunction(nullptr,
+		[this](int32 i) { AddAMTBToVertexColor(i); },
+		CreateVertexColorsForAMTBLoopData,
+		Enum_TerrainGeneratorState::CreateTriangles,
+		true, ProgressWeight_CreateVertexColorsForAMTB)) {
+		UE_LOG(TerrainGenerator, Log, TEXT("SetBlockLevel done."));
+	}
+}
+
+//Add vertex Color(R:Altidude G:Moisture B:Temperature A:Biomes)
+void ATerrainGenerator::AddAMTBToVertexColor(int32 Index)
+{
+	float ZRatio = TerrainMeshPointsData[Index].PositionZRatio;
+	float ZRatioStd = ZRatio * 0.5 + 0.5;
+	float X = GetPointAxialCoord(Index).X;
+	float Y = GetPointAxialCoord(Index).Y;
+	float Moisture = GetNoise2DStd(Noise->NWMoisture, X, Y, MoistureSampleScale, MoistureValueScale);
+	float Temperature = GetNoise2DStd(Noise->NWTemperature, X, Y, TemperatureSampleScale, TemperatureValueScale);
+	float Biomes = GetNoise2DStd(Noise->NWBiomes, X, Y, BiomesSampleScale, BiomesValueScale);
+	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, Biomes));
+	
 }
 
 void ATerrainGenerator::CreateTriangles()

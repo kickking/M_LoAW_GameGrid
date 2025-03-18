@@ -28,6 +28,8 @@ enum class Enum_TerrainGeneratorState : uint8
 	CreateRiverLine,
 	DigRiverLine,
 
+	CreateVertexColorsForAMTB,
+
 	CreateTriangles,
 	CalNormalsInit,
 	CalNormalsAcc,
@@ -123,6 +125,8 @@ protected:
 	FStructLoopData UpperRiverDivideLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData LowerRiverDivideLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData CreateVertexColorsForAMTBLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData CreateTrianglesLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
@@ -242,7 +246,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetBlockLevelEx = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_CreateTriangles = 0.15f;
+	float ProgressWeight_CreateVertexColorsForAMTB = 0.05f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	float ProgressWeight_CreateTriangles = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CalNormalsInit = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
@@ -351,7 +357,6 @@ private:
 		const FStructHeightMapping& Mapping);
 
 	void CreateUV(float X, float Y);
-	void CreateVertexColorsForAMTB(float RatioStd, float X, float Y);
 
 	float GetNoise2DStd(UFastNoiseWrapper* NWP, float X, float Y, 
 		float SampleScale = 1.f, float ValueScale = 1.f);
@@ -405,6 +410,9 @@ private:
 	FIntPoint GetPointAxialCoord(int32 Index);
 	FVector2D GetPointPosition(int32 Index);
 	int32 GetPointsDistance(int32 Index1, int32 Index2);
+
+	void CreateVertexColorsForAMTB();
+	void AddAMTBToVertexColor(int32 Index);
 
 	//Create Triangles
 	void CreateTriangles();
