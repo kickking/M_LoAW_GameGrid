@@ -54,10 +54,49 @@ public:
 		}
 	}
 
+	template <class T>
+	FORCEINLINE static bool BFSLoopFunction(AActor* Owner,
+		TStructBFSData<T>& BFSData,
+		TArray<int32>& IndexSaved,
+		FStructLoopData& LoopData,
+		const FTimerDynamicDelegate& Delegate,
+		TFunction<void()> InitFunc,
+		TFunction<bool(const T& Current, T& Next, int32& Index, TSet<T>& Reached)> NextFunc)
+	{
+		int32 Count = 0;
+		bool SaveLoopFlag = false;
+		
+		if (InitFunc && !LoopData.HasInitialized) {
+			LoopData.HasInitialized = true;
+			InitFunc();
+		}
+
+		while (!BFSData.Frontier.IsEmpty()) {
+			FlowControlUtility::SaveLoopData(Owner, LoopData, Count, IndexSaved, Delegate, SaveLoopFlag);
+			if (SaveLoopFlag) {
+				return false;
+			}
+
+			T Current;
+			BFSData.Frontier.Dequeue(Current);
+			T Next;
+			int32 Index = 0;
+
+			while (NextFunc(Current, Next, Index, BFSData.Reached)) {
+				if (!BFSData.Reached.Contains(Next)) {
+					BFSData.Frontier.Enqueue(Next);
+					BFSData.Reached.Add(Next);
+				}
+			}
+		}
+		return true;
+	}
+
 	//Breadth First Search for Chunk
 	template <class T>
 	FORCEINLINE static bool BFSFCLoopFunction(AActor* Owner,
 		TStructBFSData<T>& BFSData,
+		TArray<int32>& IndexSaved,
 		FStructLoopData& LoopData,
 		const FTimerDynamicDelegate& Delegate,
 		TFunction<void()> InitFunc,
@@ -65,7 +104,6 @@ public:
 		TFunction<void()> DoAfterFunc)
 	{
 		int32 Count = 0;
-		TArray<int32> Indices = {};
 		bool SaveLoopFlag = false;
 
 		if (InitFunc && !LoopData.HasInitialized) {
@@ -82,7 +120,7 @@ public:
 				BFSData.Reached.Add(arr[0]);
 			}
 			while (!BFSData.Frontier.IsEmpty()) {
-				FlowControlUtility::SaveLoopData(Owner, LoopData, Count, Indices, Delegate, SaveLoopFlag);
+				FlowControlUtility::SaveLoopData(Owner, LoopData, Count, IndexSaved, Delegate, SaveLoopFlag);
 				if (SaveLoopFlag) {
 					return false;
 				}
@@ -109,11 +147,75 @@ public:
 
 	//A* Search
 	template <class T>
-	FORCEINLINE static void AStarSearchFunction(TStructAStarData<T>& AStarData,
+	FORCEINLINE static bool AStarSearchLoopFunction(AActor* Owner,
+		TStructAStarData<T>& AStarData,
+		TArray<int32>& IndexSaved,
+		FStructLoopData& LoopData,
+		const FTimerDynamicDelegate& Delegate,
+		TFunction<void()> InitFunc,
 		TFunction<bool(const T& Current, T& Next, int32& Index)> NextFunc,
 		TFunction<float(const T& Current, const T& Next)> Cost,
 		TFunction<float(const T& Goal, const T& Next)> Heuristic
 		)
+	{
+		int32 Count = 0;
+		bool SaveLoopFlag = false;
+
+		if (InitFunc && !LoopData.HasInitialized) {
+			LoopData.HasInitialized = true;
+			InitFunc();
+		}
+		
+		while (!AStarData.Frontier.IsEmpty()) {
+			FlowControlUtility::SaveLoopData(Owner, LoopData, Count, IndexSaved, Delegate, SaveLoopFlag);
+			if (SaveLoopFlag) {
+				return false;
+			}
+
+			T Current;
+			Current = AStarData.Frontier.Pop();
+			if (AStarData.Goal == Current) {
+				break;
+			}
+
+			T Next;
+			int32 Index = 0;
+			float NewCost = 0.f;
+			float Priority = 0.f;
+			while (NextFunc(Current, Next, Index)) {
+				NewCost = AStarData.CostSoFar[Current] + Cost(Current, Next);
+				bool flag = false;
+				if (!AStarData.CostSoFar.Contains(Next)) {
+					AStarData.CostSoFar.Add(Next, NewCost);
+					flag = true;
+				}
+				if (NewCost < AStarData.CostSoFar[Next]) {
+					AStarData.CostSoFar[Next] = NewCost;
+					flag = true;
+				}
+				if (flag) {
+					Priority = NewCost + Heuristic(AStarData.Goal, Next);
+					AStarData.Frontier.Push(Next, Priority);
+					if (!AStarData.CameFrom.Contains(Next)) {
+						AStarData.CameFrom.Add(Next, Current);
+					}
+					else {
+						AStarData.CameFrom[Next] = Current;
+					}
+				}
+			}
+			Count++;
+		}
+
+		return true;
+	}
+
+	template <class T>
+	FORCEINLINE static void AStarSearchFunction(TStructAStarData<T>& AStarData,
+		TFunction<bool(const T& Current, T& Next, int32& Index)> NextFunc,
+		TFunction<float(const T& Current, const T& Next)> Cost,
+		TFunction<float(const T& Goal, const T& Next)> Heuristic
+	)
 	{
 		while (!AStarData.Frontier.IsEmpty()) {
 			T Current;
@@ -163,5 +265,13 @@ public:
 		}
 		Path.Add(Start);
 		Algo::Reverse(Path);
+	}
+
+	template <class T>
+	FORCEINLINE static void ClearAStarData(TStructAStarData<T>& AStarData)
+	{
+		AStarData.Frontier.Empty();
+		AStarData.CameFrom.Empty();
+		AStarData.CostSoFar.Empty();
 	}
 };

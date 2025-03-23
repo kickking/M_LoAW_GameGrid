@@ -45,6 +45,9 @@ struct FStructTerrainMeshPointData
 	float RiverBlockZRatio = 0.0;
 
 	UPROPERTY(BlueprintReadOnly)
+	float RiverPoolZRatio = 0.0;
+
+	UPROPERTY(BlueprintReadOnly)
 	int32 BlockLevel = 0;
 
 	UPROPERTY(BlueprintReadOnly)

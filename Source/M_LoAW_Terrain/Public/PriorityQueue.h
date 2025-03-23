@@ -48,5 +48,9 @@ public:
 		Queue.HeapPop(Node);
 		return Node.Element;
 	}
+
+	FORCEINLINE void Empty() {
+		Queue.Empty();
+	}
 };
 

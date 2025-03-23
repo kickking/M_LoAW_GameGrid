@@ -26,7 +26,10 @@ enum class Enum_TerrainGeneratorState : uint8
 	DivideLowerRiver,
 	ChunkToOnePoint,
 	CreateRiverLine,
+	FindRiverLines,
 	DigRiverLine,
+	DigRiverPool,
+	CombinePoolToTerrain,
 
 	CreateVertexColorsForAMTB,
 
@@ -64,7 +67,7 @@ private:
 	float ProgressPassed = 0.f;
 	float Progress = 0.f;
 
-	TArray<FVector> NormalsAcc;
+	TArray<FVector> NormalsAcc = {};
 
 	TArray<FStructTerrainMeshPointData> TerrainMeshPointsData = {};
 	TMap<FIntPoint, int32> TerrainMeshPointsIndices = {};
@@ -72,13 +75,13 @@ private:
 	TMap<FIntPoint, int32> WaterMeshPointsIndices = {};
 
 	int32 BlockLevelMax = 0;
-	TArray<FStructLoopData> BlockLevelExLoopDatas;
+	TArray<FStructLoopData> BlockLevelExLoopDatas = {};
 
 	TSet<int32> UpperRiverIndices = {};
 	TSet<int32> LowerRiverIndices = {};
 
-	TStructBFSData<int32> UpperRiverDivideData;
-	TStructBFSData<int32> LowerRiverDivideData;
+	TStructBFSData<int32> UpperRiverDivideData = {};
+	TStructBFSData<int32> LowerRiverDivideData = {};
 
 	TArray<TSet<int32>> UpperRiverChunks = {};
 	TArray<TSet<int32>> LowerRiverChunks = {};
@@ -87,6 +90,8 @@ private:
 	TArray<int32> LowerRiverEndPoints = {};
 
 	TArray<FStructRiverLinePointData> RiverLinePointDatas = {};
+
+	TStructAStarData<int32> FindRiverLineData = {};
 
 	float RiverNoiseSampleRotSin = 0.0;
 	float RiverNoiseSampleRotCos = 0.0;
@@ -125,6 +130,12 @@ protected:
 	FStructLoopData UpperRiverDivideLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData LowerRiverDivideLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData FindRiverLinesLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData DigRiverLineLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData DigRiverPoolLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData CreateVertexColorsForAMTBLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
@@ -219,7 +230,7 @@ protected:
 	float RiverDirectionHeuristicRatio = 1.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "-0.1", ClampMax = "0.0"))
 	float RiverDepthRatioStart = -0.005;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "-1.0", ClampMax = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "-1.0", ClampMax = "-0.1"))
 	float RiverDepthRatioMax = -0.07;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "-1.0", ClampMax = "0.0"))
 	float RiverDepthRatioMin = -0.06;
@@ -229,6 +240,10 @@ protected:
 	float RiverDepthRisingStep = 0.003;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
 	float RiverDepthSampleScale = 1.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
+	float RiverPoolCombineRatio = 0.01;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
+	float RiverPoolCombineWide = 0.03;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialParameterCollection* TerrainMPC;
@@ -242,19 +257,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CreateVertices = 0.2f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetBlockLevel = 0.05f;
+	float ProgressWeight_SetBlockLevel = 0.15f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetBlockLevelEx = 0.05f;
+	float ProgressWeight_SetBlockLevelEx = 0.15f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	float ProgressWeight_FindRiverLines = 0.05f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	float ProgressWeight_DigRiverLine = 0.05f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	float ProgressWeight_DigRiverPool = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CreateVertexColorsForAMTB = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_CreateTriangles = 0.1f;
+	float ProgressWeight_CreateTriangles = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_CalNormalsInit = 0.1f;
+	float ProgressWeight_CalNormalsInit = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_CalNormalsAcc = 0.35f;
+	float ProgressWeight_CalNormalsAcc = 0.15f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_NormalizeNormals = 0.1f;
+	float ProgressWeight_NormalizeNormals = 0.05f;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Custom|Render|Land")
 	TArray<FVector> Vertices;
@@ -403,9 +424,16 @@ private:
 	float RiverDirectionAltitudeCost(int32 Index);
 	float RiverDirectionHeuristic(const int32& Goal, const int32& Next);
 	void DigRiverLine();
+	int32 GetTotalRiverLinePointNum();
 	float FindRiverBlockZByNeighbor(int32 Index);
 	void UpdateRiverPointZ(int32 Index, float ZRatio);
 	bool DigRiverNextPoint(const int32& Current, int32& Next, int32& Index, TSet<int32>& Reached);
+
+	void DigRiverPool();
+	void UpdateRiverPoolZ(int32 Index, float ZRatio);
+	bool DigRiverPoolNextPoint(const int32& Current, int32& Next, int32& Index, TSet<int32>& Reached);
+
+	void CombinePoolToTerrain();
 
 	FIntPoint GetPointAxialCoord(int32 Index);
 	FVector2D GetPointPosition(int32 Index);

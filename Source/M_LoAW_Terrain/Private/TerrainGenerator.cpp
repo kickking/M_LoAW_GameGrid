@@ -67,7 +67,10 @@ void ATerrainGenerator::DoWorkFlow()
 	case Enum_TerrainGeneratorState::DivideLowerRiver:
 	case Enum_TerrainGeneratorState::ChunkToOnePoint:
 	case Enum_TerrainGeneratorState::CreateRiverLine:
+	case Enum_TerrainGeneratorState::FindRiverLines:
 	case Enum_TerrainGeneratorState::DigRiverLine:
+	case Enum_TerrainGeneratorState::DigRiverPool:
+	case Enum_TerrainGeneratorState::CombinePoolToTerrain:
 		CreateRiver();
 		break;
 	case Enum_TerrainGeneratorState::CreateVertexColorsForAMTB:
@@ -173,7 +176,10 @@ void ATerrainGenerator::InitLoopData()
 
 	FlowControlUtility::InitLoopData(UpperRiverDivideLoopData);
 	FlowControlUtility::InitLoopData(LowerRiverDivideLoopData);
-
+	FlowControlUtility::InitLoopData(FindRiverLinesLoopData);
+	FlowControlUtility::InitLoopData(DigRiverLineLoopData);
+	FlowControlUtility::InitLoopData(DigRiverPoolLoopData);
+	
 	FlowControlUtility::InitLoopData(CreateVertexColorsForAMTBLoopData);
 
 	FlowControlUtility::InitLoopData(CreateTrianglesLoopData);
@@ -612,8 +618,17 @@ void ATerrainGenerator::CreateRiver()
 		case Enum_TerrainGeneratorState::CreateRiverLine:
 			CreateRiverLine();
 			break;
+		case Enum_TerrainGeneratorState::FindRiverLines:
+			FindRiverLines();
+			break;
 		case Enum_TerrainGeneratorState::DigRiverLine:
 			DigRiverLine();
+			break;
+		case Enum_TerrainGeneratorState::DigRiverPool:
+			DigRiverPool();
+			break;
+		case Enum_TerrainGeneratorState::CombinePoolToTerrain:
+			CombinePoolToTerrain();
 			break;
 		default:
 			break;
@@ -648,8 +663,10 @@ void ATerrainGenerator::DivideUpperRiverEndPointsIntoChunks()
 	auto InitFunc = [&]() {
 		UpperRiverDivideData.Seed = UpperRiverIndices;
 		};
+	TArray<int32> Indices = {};
 	if (AStarUtility::BFSFCLoopFunction<int32>(this,
 		UpperRiverDivideData,
+		Indices,
 		UpperRiverDivideLoopData,
 		WorkflowDelegate,
 		InitFunc,
@@ -667,8 +684,10 @@ void ATerrainGenerator::DivideLowerRiverEndPointsIntoChunks()
 	auto InitFunc = [&]() {
 		LowerRiverDivideData.Seed = LowerRiverIndices;
 		};
+	TArray<int32> Indices = {};
 	if (AStarUtility::BFSFCLoopFunction<int32>(this,
 		LowerRiverDivideData,
+		Indices,
 		LowerRiverDivideLoopData,
 		WorkflowDelegate,
 		InitFunc,
@@ -723,11 +742,13 @@ void ATerrainGenerator::ChunkToOnePoint(TArray<TSet<int32>>& Chunk, TArray<int32
 	for (int32 i = 0; i < Chunk.Num(); i++) {
 		TArray<int32> arr = Chunk[i].Array();
 		int32 MaxZIndex = 0;
+		float MaxZ = 0.0;
+		float CurrentZ = 0.0;
 		for (int32 j = 0; j < arr.Num(); j++) {
-			float z1 = FMath::Abs<float>(TerrainMeshPointsData[arr[j]].PositionZ);
-			float z2 = FMath::Abs<float>(TerrainMeshPointsData[MaxZIndex].PositionZ);
-			if (z1 > z2) {
+			CurrentZ = FMath::Abs<float>(TerrainMeshPointsData[arr[j]].PositionZ);
+			if (CurrentZ > MaxZ) {
 				MaxZIndex = arr[j];
+				MaxZ = CurrentZ;
 			}
 		}
 		EndPoints.Add(MaxZIndex);
@@ -737,10 +758,9 @@ void ATerrainGenerator::ChunkToOnePoint(TArray<TSet<int32>>& Chunk, TArray<int32
 void ATerrainGenerator::CreateRiverLine()
 {
 	CreateRiverLinePointDatas();
-	FindRiverLines();
 
 	FTimerHandle TimerHandle;
-	WorkflowState = Enum_TerrainGeneratorState::DigRiverLine;
+	WorkflowState = Enum_TerrainGeneratorState::FindRiverLines;
 	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
 	UE_LOG(TerrainGenerator, Log, TEXT("CreateRiverLine done."));
 }
@@ -780,24 +800,52 @@ void ATerrainGenerator::CreateRiverLinePointDatas()
 
 void ATerrainGenerator::FindRiverLines()
 {
-	for (int32 i = 0; i < RiverLinePointDatas.Num(); i++) {
-		TStructAStarData<int32> Data;
-		int32 Start = RiverLinePointDatas[i].UpperPointIndex;
-		Data.Frontier.Push(Start, 0.0);
-		Data.CameFrom.Add(Start, -1);
-		Data.CostSoFar.Add(Start, 0.0);
-		Data.Goal = RiverLinePointDatas[i].LowerPointIndex;
+	TArray<int32> Indices = { 0 };
+	int32 i = FindRiverLinesLoopData.IndexSaved[0];
+	for (; i < RiverLinePointDatas.Num(); i++) {
+		Indices[0] = i;
 
-		CalRiverNoiseSampleRotValue(RiverLinePointDatas.Num(), i);
+		if (!FindRiverLinesLoopData.HasInitialized) {
+			FindRiverLinesLoopData.HasInitialized = true;
+			AStarUtility::ClearAStarData(FindRiverLineData);
+			int32 Start = RiverLinePointDatas[i].UpperPointIndex;
+			FindRiverLineData.Frontier.Push(Start, 0.0);
+			FindRiverLineData.CameFrom.Add(Start, -1);
+			FindRiverLineData.CostSoFar.Add(Start, 0.0);
+			FindRiverLineData.Goal = RiverLinePointDatas[i].LowerPointIndex;
 
-		AStarUtility::AStarSearchFunction<int32>(Data,
+			CalRiverNoiseSampleRotValue(RiverLinePointDatas.Num(), i);
+		}
+
+		if (AStarUtility::AStarSearchLoopFunction<int32>(this,
+			FindRiverLineData,
+			Indices,
+			FindRiverLinesLoopData,
+			WorkflowDelegate,
+			nullptr,
 			[this](const int32& Current, int32& Next, int32& Index) { return NextPoint(Current, Next, Index); },
 			[this](const int32& Current, const int32& Next) { return RiverDirectionCost(Current, Next); },
-			[this](const int32& Goal, const int32& Next) { return RiverDirectionHeuristic(Goal, Next); });
-
-		AStarUtility::ReconstructPath<int32>(Data.Goal, Start, Data.CameFrom,
-			RiverLinePointDatas[i].LinePointIndices);
+			[this](const int32& Goal, const int32& Next) { return RiverDirectionHeuristic(Goal, Next); })) {
+			AStarUtility::ReconstructPath<int32>(FindRiverLineData.Goal,
+				RiverLinePointDatas[i].UpperPointIndex, 
+				FindRiverLineData.CameFrom,
+				RiverLinePointDatas[i].LinePointIndices);
+			
+			FindRiverLinesLoopData.HasInitialized = false;
+			
+		}
+		else {
+			return;
+		}
+		Progress = ProgressPassed + (float)(i + 1) / (float)RiverLinePointDatas.Num() * ProgressWeight_FindRiverLines;
 	}
+
+	ProgressPassed += ProgressWeight_FindRiverLines;
+
+	FTimerHandle TimerHandle;
+	WorkflowState = Enum_TerrainGeneratorState::DigRiverLine;
+	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
+	UE_LOG(TerrainGenerator, Log, TEXT("FindRiverLines done."));
 }
 
 void ATerrainGenerator::CalRiverNoiseSampleRotValue(int32 Total, int32 Index)
@@ -852,16 +900,36 @@ float ATerrainGenerator::RiverDirectionHeuristic(const int32& Goal, const int32&
 
 void ATerrainGenerator::DigRiverLine()
 {
-	for (int32 i = 0; i < RiverLinePointDatas.Num(); i++)
+	TArray<int32> Indices = { 0, 0 };
+	int32 Count = 0;
+	bool SaveLoopFlag = false;
+
+	int32 i = DigRiverLineLoopData.IndexSaved[0];
+	for (; i < RiverLinePointDatas.Num(); i++)
 	{
+		Indices[0] = i;
 		FStructRiverLinePointData LinePointData = RiverLinePointDatas[i];
-		RiverLinePointBlockTestSet.Empty();
-		CurrentLineDepthRatio = RiverDepthRatioStart;
-		for (int32 j = 0; j < LinePointData.LinePointIndices.Num(); j++)
+
+		if (!DigRiverLineLoopData.HasInitialized) {
+			DigRiverLineLoopData.HasInitialized = true;
+
+			RiverLinePointBlockTestSet.Empty();
+			CurrentLineDepthRatio = RiverDepthRatioStart;
+		}
+
+		int32 j = DigRiverLineLoopData.IndexSaved[1];
+		for (; j < LinePointData.LinePointIndices.Num(); j++)
 		{
+			Indices[1] = j;
+
+			FlowControlUtility::SaveLoopData(this, DigRiverLineLoopData, Count, Indices, WorkflowDelegate, SaveLoopFlag);
+			if (SaveLoopFlag) {
+				return;
+			}
+
 			CurrentLinePointIndex = LinePointData.LinePointIndices[j];
 			float ZRatio = TerrainMeshPointsData[CurrentLinePointIndex].PositionZRatio;
-			if (ZRatio > 0.0) {
+			if (ZRatio > AltitudeBlockRatio) {
 				continue;
 			}
 			
@@ -899,13 +967,30 @@ void ATerrainGenerator::DigRiverLine()
 					}
 				}
 			}
+
+			Count++;
+			Progress = ProgressPassed + (float)DigRiverLineLoopData.Count / (float)GetTotalRiverLinePointNum() * ProgressWeight_DigRiverLine;
+
 		}
+		DigRiverLineLoopData.HasInitialized = false;
 	}
 
+	ProgressPassed += ProgressWeight_DigRiverLine;
+
 	FTimerHandle TimerHandle;
-	WorkflowState = Enum_TerrainGeneratorState::CreateVertexColorsForAMTB;
+	WorkflowState = Enum_TerrainGeneratorState::DigRiverPool;
 	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
 	UE_LOG(TerrainGenerator, Log, TEXT("DigRiverLine done."));
+}
+
+int32 ATerrainGenerator::GetTotalRiverLinePointNum()
+{
+	int32 Num = 0;
+	for (int32 i = 0; i < RiverLinePointDatas.Num(); i++)
+	{
+		Num += RiverLinePointDatas[i].LinePointIndices.Num();
+	}
+	return Num;
 }
 
 float ATerrainGenerator::FindRiverBlockZByNeighbor(int32 Index)
@@ -980,6 +1065,134 @@ bool ATerrainGenerator::DigRiverNextPoint(const int32& Current, int32& Next,
 		}
 	}
 	return false;
+}
+
+void ATerrainGenerator::DigRiverPool()
+{
+	TArray<int32> Indices = { 0, 0 };
+	int32 Count = 0;
+	bool SaveLoopFlag = false;
+
+	int32 i = DigRiverPoolLoopData.IndexSaved[0];
+	for (; i < RiverLinePointDatas.Num(); i++)
+	{
+		Indices[0] = i;
+		FStructRiverLinePointData LinePointData = RiverLinePointDatas[i];
+
+		if (!DigRiverPoolLoopData.HasInitialized) {
+			DigRiverPoolLoopData.HasInitialized = true;
+			CurrentLineDepthRatio = RiverDepthRatioStart;
+		}
+		int32 j = DigRiverPoolLoopData.IndexSaved[1];
+		for (; j < LinePointData.LinePointIndices.Num(); j++)
+		{
+			Indices[1] = j;
+			FlowControlUtility::SaveLoopData(this, DigRiverPoolLoopData, Count, Indices, WorkflowDelegate, SaveLoopFlag);
+			if (SaveLoopFlag) {
+				return;
+			}
+			
+			CurrentLinePointIndex = LinePointData.LinePointIndices[j];
+			float ZRatio = TerrainMeshPointsData[CurrentLinePointIndex].PositionZRatio;
+			if (ZRatio < (RiverPoolCombineRatio - RiverPoolCombineWide)) {
+				break;
+			}
+
+			UpdateRiverPoolZ(CurrentLinePointIndex, CurrentLineDepthRatio);
+			UnitLineRisingStep = FMath::Abs(CurrentLineDepthRatio) / RiverDepthRisingStep;
+			
+			TStructBFSData<int32> BFSData;
+			BFSData.Frontier.Enqueue(CurrentLinePointIndex);
+			BFSData.Reached.Add(CurrentLinePointIndex);
+			AStarUtility::BFSFunction<int32>(BFSData,
+				[this](const int32& Current, int32& Next, int32& Index, TSet<int32>& Reached) { return DigRiverPoolNextPoint(Current, Next, Index, Reached); });
+
+			FIntPoint AxialCoord = GetPointAxialCoord(CurrentLinePointIndex);
+			FVector2D Coord = GetRiverRotatedAxialCoord(AxialCoord);
+			float DepthNoise = Noise->NWRiverDepth->GetNoise2D(Coord.X * RiverDepthSampleScale,
+				Coord.Y * RiverDepthSampleScale);
+
+			if (CurrentLineDepthRatio > RiverDepthRatioMin) {
+				CurrentLineDepthRatio -= RiverDepthChangeStep;
+			}
+			else {
+				if (DepthNoise > 0.0) {
+					CurrentLineDepthRatio += RiverDepthChangeStep;
+					if (CurrentLineDepthRatio > RiverDepthRatioMin) {
+						CurrentLineDepthRatio = RiverDepthRatioMin;
+					}
+				}
+				else {
+					CurrentLineDepthRatio -= RiverDepthChangeStep;
+					if (CurrentLineDepthRatio < RiverDepthRatioMax) {
+						CurrentLineDepthRatio = RiverDepthRatioMax;
+					}
+				}
+			}
+			Count++;
+		}
+		Progress = ProgressPassed + (float)(i + 1) / (float)RiverLinePointDatas.Num() * ProgressWeight_DigRiverPool;
+		DigRiverLineLoopData.HasInitialized = false;
+	}
+
+	ProgressPassed += ProgressWeight_DigRiverPool;
+
+	FTimerHandle TimerHandle;
+	WorkflowState = Enum_TerrainGeneratorState::CombinePoolToTerrain;
+	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
+	UE_LOG(TerrainGenerator, Log, TEXT("DigRiverPool done."));
+}
+
+void ATerrainGenerator::UpdateRiverPoolZ(int32 Index, float ZRatio)
+{
+	if (TerrainMeshPointsData[Index].RiverPoolZRatio > ZRatio) {
+		TerrainMeshPointsData[Index].RiverPoolZRatio = ZRatio;
+	}
+}
+
+bool ATerrainGenerator::DigRiverPoolNextPoint(const int32& Current, int32& Next, int32& Index, TSet<int32>& Reached)
+{
+	int32 dis = GetPointsDistance(CurrentLinePointIndex, Current);
+	float diff = UnitLineRisingStep - (float)dis - 1.0;
+	if (diff > 0) {
+		float X = diff / UnitLineRisingStep;
+		float ZRatio = X < 0.5 ? FMath::Pow(X, 5.0) * 16.0 : 1 - FMath::Pow(-2.0 * X + 2.0, 5.0) / 2.0;
+		ZRatio *= CurrentLineDepthRatio;
+		FStructGridDataNeighbors Neighbors = pGI->TerrainGridPoints[TerrainMeshPointsData[Current].GridDataIndex].Neighbors[0];
+		if (Index < Neighbors.Points.Num()) {
+			FIntPoint key = Neighbors.Points[Index];
+			if (TerrainMeshPointsIndices.Contains(key)) {
+				Next = TerrainMeshPointsIndices[key];
+				UpdateRiverPoolZ(Next, ZRatio);
+			}
+			Index++;
+			return true;
+		}
+	}
+	return false;
+}
+
+void ATerrainGenerator::CombinePoolToTerrain()
+{
+	for (int32 i = 0; i < TerrainMeshPointsData.Num(); i++)
+	{
+		float PoolZ = TerrainMeshPointsData[i].RiverPoolZRatio;
+		float Z = TerrainMeshPointsData[i].PositionZRatio;
+		if (PoolZ < 0) {
+			float alpha = FMath::Abs<float>(TerrainMeshPointsData[i].PositionZRatio - RiverPoolCombineRatio);
+			alpha = alpha / RiverPoolCombineWide;
+			alpha = FMath::Clamp<float>(alpha, 0.0, 1.0);
+
+			TerrainMeshPointsData[i].PositionZRatio = FMath::Lerp<float>(PoolZ, Z, alpha);
+			TerrainMeshPointsData[i].PositionZ = TerrainMeshPointsData[i].PositionZRatio * TileAltitudeMultiplier;
+			Vertices[i].Z = TerrainMeshPointsData[i].PositionZ;
+		}
+	}
+
+	FTimerHandle TimerHandle;
+	WorkflowState = Enum_TerrainGeneratorState::CreateVertexColorsForAMTB;
+	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
+	UE_LOG(TerrainGenerator, Log, TEXT("CombinePoolToTerrain done."));
 }
 
 FIntPoint ATerrainGenerator::GetPointAxialCoord(int32 Index)
