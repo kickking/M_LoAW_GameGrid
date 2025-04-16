@@ -5,6 +5,8 @@
 #include "M_LoAW_GridData/Public/GridDataStructDefine.h"
 #include "TerrainStructDefine.h"
 #include "AStarUtility.h"
+#include "TerrainWaterfall.h"
+#include "TerrainWaterfallMist.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -37,9 +39,17 @@ enum class Enum_TerrainGeneratorState : uint8
 	CalNormalsInit,
 	CalNormalsAcc,
 	NormalizeNormals,
+
+	CreateWaterfall,
+
 	CreateWater,
 	DrawLandMesh,
+
 	CreateTree,
+
+	Waiting,
+	WaitingCompleted,
+
 	Done,
 	Error
 };
@@ -101,14 +111,24 @@ private:
 	int32 CurrentLinePointIndex = 0;
 	float UnitLineRisingStep = 0.0;
 
+	FVector WaterfallDirection = FVector(0.f, 1.0, 0.f);
+
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 	class UProceduralMeshComponent* TerrainMesh;
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 	class UProceduralMeshComponent* WaterMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<ATerrainWaterfall> WaterfallClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<ATerrainWaterfallMist> WaterfallMistClass;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
 	float DefaultTimerRate = 0.01f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
+	float WaitingTimerRate = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise")
 	class ATerrainNoise* Noise;
@@ -240,10 +260,30 @@ protected:
 	float RiverDepthRisingStep = 0.003;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
 	float RiverDepthSampleScale = 1.0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool", meta = (ClampMin = "-1.0", ClampMax = "-0.1"))
+	float RiverPoolDepthRatioMax = -0.1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool", meta = (ClampMin = "-1.0", ClampMax = "0.0"))
+	float RiverPoolDepthRatioMin = -0.08;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RiverPoolDepthRisingStep = 0.003;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool", meta = (ClampMin = "0.0"))
 	float RiverPoolCombineRatio = 0.01;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River", meta = (ClampMin = "0.0"))
-	float RiverPoolCombineWide = 0.03;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool")
+	float RiverPoolCombineUpper = 0.04;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Pool")
+	float RiverPoolCombineLower = -0.06;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
+	float WaterfallSlopeRatio = 0.6;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
+	float WaterfallAltitudeRatioUpper = 0.1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
+	float WaterfallAltitudeRatioLower = 0.05;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0"))
+	int32 WaterfallRefOffset = 5;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallAngleRadLimit = PI / 3.0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialParameterCollection* TerrainMPC;
@@ -273,7 +313,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CalNormalsInit = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_CalNormalsAcc = 0.15f;
+	float ProgressWeight_CalNormalsAcc = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_NormalizeNormals = 0.05f;
 
@@ -376,6 +416,8 @@ private:
 		const FStructHeightMapping& Mapping, float X, float Y, float SampleScale);
 	float MappingFromRangeToRange(float InputValue, 
 		const FStructHeightMapping& Mapping);
+	float MappingFromRangeToRange(float InputValue, float RangeMax, float RangeMin, 
+		float MappingMax, float MappingMin);
 
 	void CreateUV(float X, float Y);
 
@@ -416,6 +458,7 @@ private:
 
 	void CreateRiverLine();
 	void CreateRiverLinePointDatas();
+
 	void FindRiverLines();
 	void CalRiverNoiseSampleRotValue(int32 Total, int32 Index);
 	FVector2D GetRiverRotatedAxialCoord(FIntPoint AxialCoord);
@@ -436,7 +479,8 @@ private:
 	void CombinePoolToTerrain();
 
 	FIntPoint GetPointAxialCoord(int32 Index);
-	FVector2D GetPointPosition(int32 Index);
+	FVector2D GetPointPosition2D(int32 Index);
+	FVector GetPointPosition(int32 Index);
 	int32 GetPointsDistance(int32 Index1, int32 Index2);
 
 	void CreateVertexColorsForAMTB();
@@ -456,6 +500,17 @@ private:
 	void CalTriangleNormalForVertex(int32 TriangleIndex);
 	void NormalizeNormals();
 	void AddNormal(int32 Index);
+	float AngleBetweenVectors(const FVector& A, const FVector& B);
+	void CalAngleToUp(int32 Index);
+
+	void CreateWaterfall();
+	void FindWaterfallPoints();
+	void FindWaterfallPoint(int32 Index);
+	bool IsWaterfallPoint(int32& WaterfallPointIndex, int32 Index);
+	bool IsWaterfallEnd(int32& WaterfallPointIndex, int32 Index);
+	void DoAfterWaterfall(FStructRiverLinePointData& Data, int32 Index);
+	void AddWaterfall();
+	void AddWaterfallMist();
 
 	//Create water face
 	void CreateWater();
@@ -471,6 +526,7 @@ private:
 	void CreateTerrainMesh();
 	void SetTerrainMaterial();
 
+	void Waiting();
 	void DoWorkflowDone();
 
 public:	
@@ -485,12 +541,13 @@ public:
 	void GetDebugRiverLinePointsAt(TArray<FVector>& LinePoints, int32 Index);
 
 	UFUNCTION(BlueprintCallable)
+	bool GetDebugWaterfallPointAt(FVector& WaterfallPoint, int32 Index);
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE int32 GetDebugRiverNum()
 	{
 		return RiverLinePointDatas.Num();
 	}
 
-	UFUNCTION(BlueprintCallable)
-	void GetDebugPriorityQueue(TArray<int32>& Values);
 };
 

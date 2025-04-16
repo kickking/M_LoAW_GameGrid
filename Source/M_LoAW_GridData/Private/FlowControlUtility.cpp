@@ -23,7 +23,7 @@ void FlowControlUtility::InitLoopData(FStructLoopData& InOut_Data)
 }
 
 void FlowControlUtility::SaveLoopData(AActor* Owner, FStructLoopData& InOut_Data, int32 Count, const TArray<int32>& Indices,
-	const FTimerDynamicDelegate TimerDelegate, bool& Out_Success)
+	const FTimerDynamicDelegate& TimerDelegate, bool& Out_Success)
 {
 	if (Count > InOut_Data.LoopCountLimit) {
 		for (int32 i = 0; i < Indices.Num() && i < InOut_Data.LoopDepthLimit; i++)

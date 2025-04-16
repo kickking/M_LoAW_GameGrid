@@ -51,6 +51,9 @@ struct FStructTerrainMeshPointData
 	int32 BlockLevel = 0;
 
 	UPROPERTY(BlueprintReadOnly)
+	float AngleToUp = 0.0;
+
+	UPROPERTY(BlueprintReadOnly)
 	FVector Normal = FVector();
 
 };
@@ -68,5 +71,18 @@ struct FStructRiverLinePointData
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> LinePointIndices = {};
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallRefPoint = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 WaterfallPointIndex = -1;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallDir = FVector();
+
+	class ATerrainWaterfall* Waterfall = nullptr;
+
+	class ATerrainWaterfallMist* WaterfallMist = nullptr;
 
 };
