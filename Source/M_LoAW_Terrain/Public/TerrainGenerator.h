@@ -275,15 +275,15 @@ protected:
 	float RiverPoolCombineLower = -0.06;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
-	float WaterfallSlopeRatio = 0.6;
+	float WaterfallSlopeRatio = 0.5;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
 	float WaterfallAltitudeRatioUpper = 0.1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
 	float WaterfallAltitudeRatioLower = 0.05;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0"))
 	int32 WaterfallRefOffset = 5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
-	float WaterfallAngleRadLimit = PI / 3.0;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallAngleRadLimit = PI / 3.0;*/
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialParameterCollection* TerrainMPC;

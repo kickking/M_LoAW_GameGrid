@@ -1614,17 +1614,19 @@ void ATerrainGenerator::AddWaterfall()
 		RotationAxis.Normalize();
 		FVector WaterfallNewDir = Normal.RotateAngleAxisRad(AngleNor2Up - PI / 2, RotationAxis);
 		WaterfallNewDir.Normalize();
-		Data.WaterfallDir = WaterfallNewDir;
 
 		FVector WaterfallBelow(Loc.X, Loc.Y, WaterBase);
-		float Dist = FVector::Distance(Data.WaterfallRefPoint, WaterfallBelow);
 		FVector WaterfallRefDir = Data.WaterfallRefPoint - WaterfallBelow;
 		WaterfallRefDir.Normalize();
-		float WaterfallAngle = AngleBetweenVectors(WaterfallRefDir, WaterfallNewDir);
+		WaterfallNewDir = WaterfallNewDir + WaterfallRefDir;
+		WaterfallNewDir.Normalize();
+		Data.WaterfallDir = WaterfallNewDir;
+
+		/*float WaterfallAngle = AngleBetweenVectors(WaterfallRefDir, WaterfallNewDir);
 		if (WaterfallAngle > WaterfallAngleRadLimit) {
 			Data.WaterfallPointIndex = -1;
 			continue;
-		}
+		}*/
 
 		float Angle2New = AngleBetweenVectors(WaterfallDirection, WaterfallNewDir);
 		RotationAxis = FVector::CrossProduct(WaterfallDirection, WaterfallNewDir);
@@ -1641,6 +1643,7 @@ void ATerrainGenerator::AddWaterfall()
 		float TotalZ = PosZ - WaterBase;
 		float Gravity = 980;
 		float FreefallTime = FMath::Sqrt(TotalZ * 2.0 / Gravity);
+		float Dist = FVector::Distance(Data.WaterfallRefPoint, WaterfallBelow);
 		float Velocity = Dist / FreefallTime;
 
 		Data.Waterfall->SetParamLifeTimeScale(FreefallTime);
