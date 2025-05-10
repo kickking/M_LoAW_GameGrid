@@ -28,7 +28,7 @@ private:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Params", meta = (ClampMin = "0.0"))
-	float TileSize = 400.0;
+	float TileSize = 570.0;
 
 protected:
 	virtual void InitByChild() override;

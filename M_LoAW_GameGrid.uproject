@@ -9,7 +9,8 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"M_LoAW_GridData"
+				"M_LoAW_GridData",
+				"Engine"
 			]
 		},
 		{

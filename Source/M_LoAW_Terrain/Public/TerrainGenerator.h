@@ -116,6 +116,7 @@ private:
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 	class UProceduralMeshComponent* TerrainMesh;
+
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 	class UProceduralMeshComponent* WaterMesh;
 
@@ -127,8 +128,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
 	float DefaultTimerRate = 0.01f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
-	float WaitingTimerRate = 5.0f;
+	float WaitingTimerRate = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise")
 	class ATerrainNoise* Noise;
@@ -172,7 +174,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|HighMountain", meta = (ClampMin = "0.0"))
 	float HighMountainSampleScale = 0.5;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|HighMountain")
-	FStructHeightMapping HighRangeMapping = { 0.4, 0.6, 0.0, 0.7, -0.2, -0.2 };
+	FStructHeightMapping HighRangeMapping = { 0.4, 0.7, 0.0, 1.0, -0.2, -0.2 };
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|LowMountain", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float LowMountainLevel = 0.5;
@@ -373,6 +375,14 @@ public:
 		return TerrainSize;
 	}
 
+	FORCEINLINE float GetTileAltitudeMultiplier() {
+		return TileAltitudeMultiplier;
+	}
+
+	FORCEINLINE float GetWaterBase() {
+		return WaterBase;
+	}
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -532,6 +542,10 @@ private:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+public:
+	bool GetTerrainPointByLineTrace(FVector Start, FVector End, FVector& Loc);
+	bool GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2D, FVector& Loc);
 
 public:
 	UFUNCTION(BlueprintCallable)

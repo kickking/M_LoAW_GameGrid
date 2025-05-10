@@ -22,10 +22,12 @@ public:
 
 };
 
+#define HEX_SIDE_NUM 6
+
 /**
  *
  */
-class Hex
+class M_LOAW_GRIDDATA_API Hex
 {
 private:
 	HexCoord Coord;
@@ -39,6 +41,7 @@ private:
 
 public:
 	Hex();
+	~Hex();
 	Hex(FVector Cube);
 	Hex(FVector2D Axial);
 	Hex(FIntVector CubeInt);
@@ -72,5 +75,4 @@ public:
 		return FIntPoint(Coord.Q, Coord.R);
 	}
 
-	~Hex();
 };

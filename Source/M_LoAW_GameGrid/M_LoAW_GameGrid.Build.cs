@@ -10,7 +10,7 @@ public class M_LoAW_GameGrid : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "M_LoAW_GridData" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "M_LoAW_GridData", "M_LoAW_GameBase", "M_LoAW_Terrain" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

@@ -295,7 +295,7 @@ void ATerrainGenerator::CreateVertices()
 	WorkflowState = Enum_TerrainGeneratorState::SetBlockLevel;
 	FTimerHandle TimerHandle;
 	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, CreateVerticesLoopData.Rate, false);
-	UE_LOG(TerrainGenerator, Log, TEXT("Create vertices and UVs done."));
+	UE_LOG(TerrainGenerator, Log, TEXT("Create vertices done."));
 }
 
 bool ATerrainGenerator::CreateVertex(int32 X, int32 Y, float& OutRatioStd, float& OutRatio)
@@ -344,6 +344,7 @@ float ATerrainGenerator::GetAltitude(float X, float Y, float& OutRatioStd, float
 		float wRatio = GetWaterRatio(X, Y);
 		OutRatio = CombineWaterLandRatio(wRatio, OutRatio);
 	}
+	OutRatio = FMath::Clamp<float>(OutRatio, -1.0, 1.0);
 	OutRatioStd = OutRatio * 0.5 + 0.5;
 	float z = OutRatio * TileAltitudeMultiplier;
 	return z;
@@ -1793,6 +1794,26 @@ void ATerrainGenerator::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
+bool ATerrainGenerator::GetTerrainPointByLineTrace(FVector Start, FVector End, FVector& Loc)
+{
+	FHitResult result;
+	FCollisionQueryParams params;
+	bool isHit = TerrainMesh->LineTraceComponent(result, Start, End, params);
+	if (isHit) {
+		Loc.Set(result.Location.X, result.Location.Y, result.Location.Z);
+	}
+	return isHit;
+}
+
+bool ATerrainGenerator::GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2D, FVector& Loc)
+{
+	FVector Start(Start2D.X, Start2D.Y, TileAltitudeMax);
+	FVector End(End2D.X, End2D.Y, -TileAltitudeMax);
+	return GetTerrainPointByLineTrace(Start, End, Loc);
+}
+
+
 
 void ATerrainGenerator::GetDebugRiverLineEndPoints(TArray<FVector>& Points)
 {

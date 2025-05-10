@@ -145,6 +145,32 @@ public:
 		return true;
 	}
 
+	//Breadth First Search for early exit
+	template <class T>
+	FORCEINLINE static bool BFSEEFunction(TStructBFSData<T>& BFSData,
+		TFunction<bool(const T& Current, bool& Res)> EEFunc,
+		TFunction<bool(const T& Current, T& Next, int32& Index, TSet<T>& Reached)> NextFunc)
+	{
+		while (!BFSData.Frontier.IsEmpty()) {
+			T Current;
+			BFSData.Frontier.Dequeue(Current);
+			bool Res;
+			if (EEFunc(Current, Res)) {
+				return Res;
+			}
+			T Next;
+			int32 Index = 0;
+
+			while (NextFunc(Current, Next, Index, BFSData.Reached)) {
+				if (!BFSData.Reached.Contains(Next)) {
+					BFSData.Frontier.Enqueue(Next);
+					BFSData.Reached.Add(Next);
+				}
+			}
+		}
+		return false;
+	}
+
 	//A* Search
 	template <class T>
 	FORCEINLINE static bool AStarSearchLoopFunction(AActor* Owner,
