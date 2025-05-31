@@ -80,7 +80,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0"))
 	int32 ProgressWeight_LoadPoints = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0"))
-	int32 ProgressWeight_LoadNeighbors = 1;
+	int32 ProgressWeight_LoadNeighbors = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Params")
 	int32 ParamNum = 3;
@@ -90,11 +90,6 @@ protected:
 	int32 NeighborRange = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Custom|Params")
 	int32 PointsNum = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0"))
-	float NeighborCountAddRatio = 0.15;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0"))
-	int32 NeighborCountAddMin = 1000;
 
 public:	
 	// Sets default values for this actor's properties

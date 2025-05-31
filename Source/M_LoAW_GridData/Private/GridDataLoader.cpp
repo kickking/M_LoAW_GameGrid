@@ -468,8 +468,7 @@ bool AGridDataLoader::LoadNeighbors(int32 Radius)
 	int32 Count = 0;
 	TArray<int32> Indices = { Radius, 0 };
 	bool SaveLoopFlag = false;
-	int32 CountAdd = int32((Radius - 1) * LoadNeighborsLoopData.LoopCountLimit * NeighborCountAddRatio);
-	CountAdd = CountAdd < NeighborCountAddMin ? NeighborCountAddMin : CountAdd;
+	int32 CountAdd = LoadNeighborsLoopData.LoopCountLimit - LoadNeighborsLoopData.LoopCountLimit / Radius;
 
 	int32 i = LoadNeighborsLoopData.IndexSaved[1];
 	std::string line;

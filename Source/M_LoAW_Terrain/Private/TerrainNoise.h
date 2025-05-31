@@ -16,6 +16,28 @@ class M_LOAW_TERRAIN_API ATerrainNoise : public AActor
 	GENERATED_BODY()
 	
 private:
+	//noise param for land layer 0
+	EFastNoise_NoiseType NW_Land_Layer_0_NoiseType = EFastNoise_NoiseType::PerlinFractal;
+	EFastNoise_Interp NW_Land_Layer_0_Interp = EFastNoise_Interp::Quintic;
+	EFastNoise_FractalType NW_Land_Layer_0_FractalType = EFastNoise_FractalType::FBM;
+	int32 NW_Land_Layer_0_Octaves = 5;
+	float NW_Land_Layer_0_Lacunarity = 2.0;
+	float NW_Land_Layer_0_Gain = 0.5;
+	float NW_Land_Layer_0_CellularJitter = 0.45;
+	EFastNoise_CellularDistanceFunction NW_Land_Layer_0_CDF = EFastNoise_CellularDistanceFunction::Euclidean;
+	EFastNoise_CellularReturnType NW_Land_Layer_0_CRT = EFastNoise_CellularReturnType::CellValue;
+
+	//noise param for land layer 1
+	EFastNoise_NoiseType NW_Land_Layer_1_NoiseType = EFastNoise_NoiseType::PerlinFractal;
+	EFastNoise_Interp NW_Land_Layer_1_Interp = EFastNoise_Interp::Quintic;
+	EFastNoise_FractalType NW_Land_Layer_1_FractalType = EFastNoise_FractalType::FBM;
+	int32 NW_Land_Layer_1_Octaves = 4;
+	float NW_Land_Layer_1_Lacunarity = 2.0;
+	float NW_Land_Layer_1_Gain = 0.5;
+	float NW_Land_Layer_1_CellularJitter = 0.45;
+	EFastNoise_CellularDistanceFunction NW_Land_Layer_1_CDF = EFastNoise_CellularDistanceFunction::Euclidean;
+	EFastNoise_CellularReturnType NW_Land_Layer_1_CRT = EFastNoise_CellularReturnType::CellValue;
+
 	//noise param for high mountain
 	EFastNoise_NoiseType NWHighMountain_NoiseType = EFastNoise_NoiseType::PerlinFractal;
 	EFastNoise_Interp NWHighMountain_Interp = EFastNoise_Interp::Quintic;
@@ -116,6 +138,17 @@ private:
 	EFastNoise_CellularReturnType NWTree_CRT = EFastNoise_CellularReturnType::CellValue;
 
 protected:
+	//Noise variables BP for land layer 0
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|Land")
+	int32 NW_Land_Layer_0_NoiseSeed = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|Land", meta = (ClampMin = "0.0"))
+	float NW_Land_Layer_0_NoiseFrequency = 0.02;
+	//Noise variables BP for land layer 1
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|Land")
+	int32 NW_Land_Layer_1_NoiseSeed = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|Land", meta = (ClampMin = "0.0"))
+	float NW_Land_Layer_1_NoiseFrequency = 0.02;
+
 	//Noise variables BP for high mountain
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|HighMountain")
 	int32 NWHighMountain_NoiseSeed = 0;
@@ -163,6 +196,8 @@ protected:
 	float NWTree_NoiseFrequency = 0.01;
 
 public:
+	UFastNoiseWrapper* NWLandLayer0 = nullptr;
+	UFastNoiseWrapper* NWLandLayer1 = nullptr;
 	UFastNoiseWrapper* NWHighMountain = nullptr;
 	UFastNoiseWrapper* NWLowMountain = nullptr;
 	UFastNoiseWrapper* NWRiverDirection = nullptr;

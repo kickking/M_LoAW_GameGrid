@@ -156,18 +156,6 @@ void AGameGridInput::OnDecMouseOverRadius()
 	}
 }
 
-void AGameGridInput::StartCheckMouseOver()
-{
-	GetWorldTimerManager().SetTimer(CheckTimerHandle, CheckMouseOverDelegate, CheckTimerRate, true);
-	UE_LOG(GameGridInput, Log, TEXT("Start checking mouse over grid!"));
-}
-
-void AGameGridInput::StopCheckMouseOver()
-{
-	GetWorldTimerManager().ClearTimer(CheckTimerHandle);
-	UE_LOG(GameGridInput, Log, TEXT("Stop checking mouse over grid!"));
-}
-
 void AGameGridInput::CheckMouseOver()
 {
 	if (pGG->IsLoadingCompleted()) {
@@ -190,4 +178,24 @@ void AGameGridInput::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AGameGridInput::StartCheckMouseOver()
+{
+	GetWorldTimerManager().SetTimer(CheckTimerHandle, CheckMouseOverDelegate, CheckTimerRate, true);
+	UE_LOG(GameGridInput, Log, TEXT("Start checking mouse over grid!"));
+}
+
+void AGameGridInput::StopCheckMouseOver()
+{
+	GetWorldTimerManager().ClearTimer(CheckTimerHandle);
+	UE_LOG(GameGridInput, Log, TEXT("Stop checking mouse over grid!"));
+}
+
+bool AGameGridInput::IsUseGrid()
+{
+	if (pGG) {
+		return pGG->IsUseGrid();
+	}
+	return false;
 }

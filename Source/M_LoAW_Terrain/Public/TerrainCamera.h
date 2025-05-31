@@ -51,7 +51,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|MouseParam")
 	float ZoomMin = 10000.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|MouseParam")
-	float ZoomMax = 100000.f;
+	float ZoomMax = 200000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|Timer")
 	float TimingForWaitTerrain = 0.1;
@@ -59,7 +59,7 @@ protected:
 	float TimingForScrollScreen = 0.03;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainInfo")
-	float BoundaryScalar = 0.45;
+	float BoundaryScalar = 0.55;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|ScrollScreen")
 	float ScrollScalar = 1.5;

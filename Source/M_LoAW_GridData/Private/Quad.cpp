@@ -89,6 +89,19 @@ int32 Quad::Distance(const Quad& InQuadA, const Quad& InQuadB)
 	return FMath::Abs<int32>(quad.Coord.X) + FMath::Abs<int32>(quad.Coord.Y);
 }
 
+Quad Quad::Round(const Quad& InQuad)
+{
+	float x = FMath::RoundHalfFromZero(InQuad.Coord.x);
+	float y = FMath::RoundHalfFromZero(InQuad.Coord.y);
+
+	return Quad(FVector2D(x, y));
+}
+
+Quad Quad::PosToQuad(const FVector2D& Point, float Size)
+{
+	return Round(Quad(FVector2D(Point.X / Size, Point.Y / Size)));
+}
+
 Quad::~Quad()
 {
 }

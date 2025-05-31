@@ -55,6 +55,8 @@ public:
 	static Quad DiagonalDirection(int32 Direction);
 	static Quad Neighbor(const Quad& InQuad, int32 direction);
 	static int32 Distance(const Quad& InQuadA, const Quad& InQuadB);
+	static Quad Round(const Quad& InQuad);
+	static Quad PosToQuad(const FVector2D& Point, float Size);
 
 	~Quad();
 };

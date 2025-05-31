@@ -72,5 +72,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void StopCheckMouseOver();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsUseGrid();
 	
 };

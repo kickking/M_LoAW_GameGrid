@@ -37,9 +37,12 @@ void AGameGridGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 	if (!bUseGrid) {
-		return;
+		WorkflowState = Enum_GameGridGeneratorState::Done;
 	}
-	WorkflowState = Enum_GameGridGeneratorState::InitWorkflow;
+	else {
+		WorkflowState = Enum_GameGridGeneratorState::InitWorkflow;
+	}
+	
 	DoWorkFlow();
 }
 
@@ -300,14 +303,15 @@ void AGameGridGenerator::WaitTerrain()
 			return;
 		}
 	}
-	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
+	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, WaitTerrainTimerRate, false);
 	return;
 }
 
 void AGameGridGenerator::SetGridPosZ()
 {
 	if (GameGridPointsLoopFunction(nullptr, [this](int32 i) { SetTilePosZ(i); },
-		SetGridPosZLoopData, Enum_GameGridGeneratorState::CalGridNormal,
+		SetGridPosZLoopData, 
+		Enum_GameGridGeneratorState::CalGridNormal,
 		true, ProgressWeight_SetGridPosZ)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("Set grid pos z done!"));
 	}
@@ -359,7 +363,8 @@ void AGameGridGenerator::SetTileVerticesPosZ(int32 Index)
 void AGameGridGenerator::CalGridNormal()
 {
 	if (GameGridPointsLoopFunction(nullptr, [this](int32 i) { CalTileNormal(i); },
-		CalGridNormalLoopData, Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
+		CalGridNormalLoopData, 
+		Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
 		true, ProgressWeight_CalGridNormal)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("CalGridNormal done!"));
 	}
@@ -386,7 +391,8 @@ void AGameGridGenerator::SetGridAreaBlockLevel()
 {
 	if (GameGridPointsLoopFunction([this]() { InitSetGridAreaBlockLevel(); },
 		[this](int32 i) { SetTileAreaBlockLevelByNeighbors(i); },
-		SetGridAreaBlockLevelLoopData, Enum_GameGridGeneratorState::SetGridAreaBlockLevelEx,
+		SetGridAreaBlockLevelLoopData, 
+		Enum_GameGridGeneratorState::SetGridAreaBlockLevelEx,
 		true, ProgressWeight_SetGridAreaBlockLevel)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("SetGridAreaBlockLevel done!"));
 	}
@@ -474,7 +480,7 @@ void AGameGridGenerator::SetGridAreaBlockLevelEx()
 
 	int32 i = SetGridAreaBlockLevelExLoopData.IndexSaved[0];
 	Enum_GameGridGeneratorState state = Enum_GameGridGeneratorState::SetGridAreaBlockLevelEx;
-	for (; i < AreaBlockExTimes; i++)
+	for (; i < AreaBlockExTimes;)
 	{
 		SetGridAreaBlockLevelExLoopData.IndexSaved[0] = i;
 		if (i == (AreaBlockExTimes - 1)) {
@@ -484,15 +490,17 @@ void AGameGridGenerator::SetGridAreaBlockLevelEx()
 			[this](int32 i) { SetTileAreaBlockLevelByNeighborsEx(i); },
 			AreaBlockLevelExLoopDatas[i], state)) {
 			Progress = ProgressPassed + (float)(i + 1) / (float)AreaBlockExTimes * ProgressWeight_SetGridAreaBlockLevelEx;
+			UE_LOG(GameGridGenerator, Log, TEXT("Set grid area block level extension %d done!"), i + 1);
+			i++;
+			SetGridAreaBlockLevelExLoopData.IndexSaved[0] = i;
 			if (i == (AreaBlockExTimes - 1)) {
 				ProgressPassed += ProgressWeight_SetGridAreaBlockLevelEx;
+				break;
 			}
-			UE_LOG(GameGridGenerator, Log, TEXT("Set grid area block level extension %d done!"), i + 1);
 		}
-		else {
-			return;
-		}
+		return;
 	}
+	UE_LOG(GameGridGenerator, Log, TEXT("Set grid area block level extension done!"));
 }
 
 void AGameGridGenerator::InitSetGridAreaBlockLevelEx()
@@ -663,7 +671,8 @@ void AGameGridGenerator::FindGridIsland()
 {
 	if (GameGridPointsLoopFunction(nullptr,
 		[this](int32 i) { FindTileIsLand(i); },
-		FindGridIsLandLoopData, Enum_GameGridGeneratorState::SetGridBuildingBlockLevel,
+		FindGridIsLandLoopData, 
+		Enum_GameGridGeneratorState::SetGridBuildingBlockLevel,
 		true, ProgressWeight_FindGridIsland)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("FindGridIsland done!"));
 	}
@@ -735,7 +744,8 @@ void AGameGridGenerator::SetGridBuildingBlockLevel()
 {
 	if (GameGridPointsLoopFunction([this]() { InitSetGridBuildingBlockLevel(); },
 		[this](int32 i) { SetTileBuildingBlockLevelByNeighbors(i); },
-		SetGridBuildingBlockLevelLoopData, Enum_GameGridGeneratorState::SetGridBuildingBlockLevelEx,
+		SetGridBuildingBlockLevelLoopData, 
+		Enum_GameGridGeneratorState::SetGridBuildingBlockLevelEx,
 		true, ProgressWeight_SetGridBuildingBlockLevel)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("SetGridBuildingBlockLevel done!"));
 	}
@@ -807,7 +817,7 @@ void AGameGridGenerator::SetGridBuildingBlockLevelEx()
 	}
 	int32 i = SetGridBuildingBlockLevelExLoopData.IndexSaved[0];
 	Enum_GameGridGeneratorState state = Enum_GameGridGeneratorState::SetGridBuildingBlockLevelEx;
-	for (; i < BuildingBlockExTimes; i++)
+	for (; i < BuildingBlockExTimes; )
 	{
 		SetGridBuildingBlockLevelExLoopData.IndexSaved[0] = i;
 		if (i == (BuildingBlockExTimes - 1)) {
@@ -817,15 +827,17 @@ void AGameGridGenerator::SetGridBuildingBlockLevelEx()
 			[this](int32 i) { SetTileBuildingBlockLevelByNeighborsEx(i); },
 			BuildingBlockLevelExLoopDatas[i], state)) {
 			Progress = ProgressPassed + (float)(i + 1) / (float)BuildingBlockExTimes * ProgressWeight_SetGridBuildingBlockLevelEx;
-			if (i == (BuildingBlockExTimes - 1)) {
-				ProgressPassed += ProgressWeight_SetGridBuildingBlockLevelEx;
-			}
 			UE_LOG(GameGridGenerator, Log, TEXT("Set grid building block level extension %d done!"), i + 1);
+			i++;
+			SetGridBuildingBlockLevelExLoopData.IndexSaved[0] = i;
+			if (i == BuildingBlockExTimes) {
+				ProgressPassed += ProgressWeight_SetGridBuildingBlockLevelEx;
+				break;
+			}
 		}
-		else {
-			return;
-		}
+		return;
 	}
+	UE_LOG(GameGridGenerator, Log, TEXT("Set grid building block level extension done!"));
 }
 
 void AGameGridGenerator::InitSetGridBuildingBlockLevelEx()
@@ -929,7 +941,7 @@ void AGameGridGenerator::SetGridFlyingBlockLevelEx()
 	}
 	int32 i = SetGridFlyingBlockLevelExLoopData.IndexSaved[0];
 	Enum_GameGridGeneratorState state = Enum_GameGridGeneratorState::SetGridFlyingBlockLevelEx;
-	for (; i < FlyingBlockExTimes; i++)
+	for (; i < FlyingBlockExTimes;)
 	{
 		SetGridFlyingBlockLevelExLoopData.IndexSaved[0] = i;
 		if (i == (FlyingBlockExTimes - 1)) {
@@ -939,15 +951,18 @@ void AGameGridGenerator::SetGridFlyingBlockLevelEx()
 			[this](int32 i) { SetTileFlyingBlockLevelByNeighborsEx(i); },
 			FlyingBlockLevelExLoopDatas[i], state)) {
 			Progress = ProgressPassed + (float)(i + 1) / (float)FlyingBlockExTimes * ProgressWeight_SetGridFlyingBlockLevelEx;
+			UE_LOG(GameGridGenerator, Log, TEXT("Set grid flying block level extension %d done!"), i + 1);
+			i++;
+			SetGridFlyingBlockLevelExLoopData.IndexSaved[0] = i;
 			if (i == (FlyingBlockExTimes - 1)) {
 				ProgressPassed += ProgressWeight_SetGridFlyingBlockLevelEx;
+				break;
 			}
-			UE_LOG(GameGridGenerator, Log, TEXT("Set grid flying block level extension %d done!"), i + 1);
+			
 		}
-		else {
-			return;
-		}
+		return;
 	}
+	UE_LOG(GameGridGenerator, Log, TEXT("Set grid flying block level extension done!"));
 }
 
 void AGameGridGenerator::InitSetGridFlyingBlockLevelEx()
@@ -978,7 +993,8 @@ void AGameGridGenerator::FindGridFlyingIsland()
 {
 	if (GameGridPointsLoopFunction(nullptr,
 		[this](int32 i) { FindTileFlyingIsLand(i); },
-		FindGridFlyingIsLandLoopData, Enum_GameGridGeneratorState::AddInstances,
+		FindGridFlyingIsLandLoopData, 
+		Enum_GameGridGeneratorState::AddInstances,
 		true, ProgressWeight_FindGridFlyingIsland)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("FindGridFlyingIsland done!"));
 	}
@@ -1060,7 +1076,7 @@ bool AGameGridGenerator::NextPoint3PassFlying(const int32& Current, int32& Next,
 void AGameGridGenerator::AddGridInstances()
 {
 	if (!bShowGrid) {
-		AddGridInstances();
+		InitAddGridInstances();
 		FTimerHandle TimerHandle;
 		WorkflowState = Enum_GameGridGeneratorState::Done;
 		GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
@@ -1070,7 +1086,8 @@ void AGameGridGenerator::AddGridInstances()
 
 	if (GameGridPointsLoopFunction([this]() { InitAddGridInstances(); }, 
 		[this](int32 i) { AddTileInstanceInRange(i); },
-		AddGridInstancesLoopData, Enum_GameGridGeneratorState::Done,
+		AddGridInstancesLoopData, 
+		Enum_GameGridGeneratorState::Done,
 		true, ProgressWeight_AddInstances)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("AddGridInstances done!"));
 	}

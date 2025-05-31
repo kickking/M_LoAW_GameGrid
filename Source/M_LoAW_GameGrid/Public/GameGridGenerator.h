@@ -107,6 +107,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
 	float DefaultTimerRate = 0.01f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Timer")
+	float WaitTerrainTimerRate = 1.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData CreateGridPointsLoopData;
@@ -218,6 +220,12 @@ public:
 	FORCEINLINE bool IsLoadingCompleted()
 	{
 		return WorkflowState == Enum_GameGridGeneratorState::Done;
+	}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsUseGrid()
+	{
+		return bUseGrid;
 	}
 
 protected:

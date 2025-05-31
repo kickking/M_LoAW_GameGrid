@@ -76,6 +76,30 @@ struct FStructRiverLinePointData
 	FVector WaterfallRefPoint = FVector();
 
 	UPROPERTY(BlueprintReadOnly)
+	bool HasWaterfall = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallPoint = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallDirection = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallTraceStart = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallTraceEnd = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
+	float WaterfallHeight = 0.0;
+
+	UPROPERTY(BlueprintReadOnly)
+	float WaterfallLength = 0.0;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector WaterfallEnterWaterPoint = FVector();
+
+	UPROPERTY(BlueprintReadOnly)
 	int32 WaterfallPointIndex = -1;
 
 	UPROPERTY(BlueprintReadOnly)
