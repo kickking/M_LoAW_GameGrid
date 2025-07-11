@@ -190,9 +190,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridAreaBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetGridAreaBlockLevelEx = 0.05f;
+	float ProgressWeight_SetGridAreaBlockLevelEx = 0.07f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_FindGridIsland = 0.05f;
+	float ProgressWeight_FindGridIsland = 0.07f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridBuildingBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
@@ -200,11 +200,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridFlyingBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetGridFlyingBlockLevelEx = 0.05f;
+	float ProgressWeight_SetGridFlyingBlockLevelEx = 0.07f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_FindGridFlyingIsland = 0.05f;
+	float ProgressWeight_FindGridFlyingIsland = 0.07f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_AddInstances = 0.1f;
+	float ProgressWeight_AddInstances = 0.02f;
 
 public:	
 	// Sets default values for this actor's properties

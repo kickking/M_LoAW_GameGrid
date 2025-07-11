@@ -26,7 +26,7 @@ ATerrainGenerator::ATerrainGenerator()
 
 	WaterMesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("WaterMesh"));
 	WaterMesh->SetupAttachment(TerrainMesh);
-	WaterMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WaterMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	WaterMesh->SetWorldLocation(FVector(0.0, 0.0, -1.0));
 
 	BindDelegate();
@@ -91,13 +91,13 @@ void ATerrainGenerator::DoWorkFlow()
 	case Enum_TerrainGeneratorState::DrawLandMesh:
 		CreateTerrainMesh();
 		SetTerrainMaterial();
+		WorkflowState = Enum_TerrainGeneratorState::CreateWater;
+	case Enum_TerrainGeneratorState::CreateWater:
+		CreateWater();
 		WorkflowState = Enum_TerrainGeneratorState::CreateWaterfall;
 	case Enum_TerrainGeneratorState::CreateWaterfall:
 		CreateWaterfall();
 		break;
-	case Enum_TerrainGeneratorState::CreateWater:
-		CreateWater();
-		WorkflowState = Enum_TerrainGeneratorState::Done;
 	case Enum_TerrainGeneratorState::Done:
 		DoWorkflowDone();
 		UE_LOG(TerrainGenerator, Log, TEXT("Create terrain done."));
@@ -157,7 +157,8 @@ bool ATerrainGenerator::CheckMaterialSetting()
 	if (TerrainMPC == nullptr ||
 		TerrainMaterialIns == nullptr || 
 		WaterMaterialIns == nullptr ||
-		CausticsMaterialIns == nullptr) {
+		CausticsMaterialIns == nullptr ||
+		WaterfallMaterialIns == nullptr) {
 		UE_LOG(TerrainGenerator, Warning, TEXT("CheckMaterialSetting Error!"));
 		return false;
 	}
@@ -214,18 +215,6 @@ void ATerrainGenerator::InitReceiveDecal()
 
 void ATerrainGenerator::InitBaseRatio()
 {
-	if (HasWater) {
-		UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("LavaBaseRatio"),
-			LavaBaseRatio);
-	}
-	else {
-		UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("LavaBaseRatio"),
-			-2.0);
-	}
-	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("DesertBaseRatio"),
-		DesertBaseRatio);
-	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("SwampBaseRatio"),
-		SwampBaseRatio);
 }
 
 void ATerrainGenerator::InitWater()
@@ -311,9 +300,6 @@ bool ATerrainGenerator::CreateVertex(int32 X, int32 Y, float& OutRatioStd, float
 	AddVertex(Data, OutRatioStd, OutRatio);
 	TerrainMeshPointsData.Add(Data);
 	GetZRatioInfo(Data);
-	if (HasRiver) {
-		//AddRiverEndPoint(Data);
-	}
 	return true;
 }
 
@@ -328,16 +314,6 @@ void ATerrainGenerator::AddVertex(FStructTerrainMeshPointData& Data, float& OutR
 	Data.PositionZRatio = OutRatio;
 	Vertices.Add(FVector(VX, VY, VZ));
 }
-
-//void ATerrainGenerator::AddRiverEndPoint(const FStructTerrainMeshPointData& Data)
-//{
-//	if (Data.PositionZ >= TileAltitudeMultiplier * UpperRiverLimitZRatio) {
-//		UpperRiverIndices.Add(TerrainMeshPointsIndices[pGI->TerrainGridPoints[Data.GridDataIndex].AxialCoord]);
-//	}
-//	if (Data.PositionZ <= TileAltitudeMultiplier * LowerRiverLimitZRatio) {
-//		LowerRiverIndices.Add(TerrainMeshPointsIndices[pGI->TerrainGridPoints[Data.GridDataIndex].AxialCoord]);
-//	}
-//}
 
 void ATerrainGenerator::GetZRatioInfo(const FStructTerrainMeshPointData& Data)
 {
@@ -356,31 +332,12 @@ void ATerrainGenerator::GetZRatioInfo(const FStructTerrainMeshPointData& Data)
 
 float ATerrainGenerator::GetAltitude(float X, float Y, float& OutRatioStd, float& OutRatio)
 {
-	/*OutRatio = GetHighMountainRatio(X, Y) + GetLowMountianRatio(X, Y);*/
-
-	float scale = 0.25;
 	float k = 0.5;
 	FVector2D slope0;
-	OutRatio = GetGradientRatioZ(Noise->NWLandLayer0, X, Y, scale, 0.0, 0.2,
+	OutRatio = GetGradientRatioZ(Noise->NWLandLayer0, X, Y, 
+		[this](float X, float Y) { return GetLandLayer0Ratio(X, Y); },
+		0.0, 0.2,
 		FVector2d(0.0, 0.0), slope0) + GetLandLayer1Ratio(X, Y);
-
-	/*OutRatio = GetGradientRatioZ(Noise->NWLandLayer0, X, Y, scale, 0.0, 0.15,
-		FVector2d(0.0, 0.0), slope0);*/
-	//OutRatio = GetLandLayer1Ratio(X, Y);
-
-	/*float Ratio0 = GetGradientRatioZ(Noise->NWLandLayer0, X, Y, scale, 0.0, 1.0,
-		FVector2d(0.0, 0.0), slope0);
-	FVector2D slope1;
-	OutRatio = GetGradientRatioZ(Noise->NWLandLayer1, X, Y, scale, Ratio0, 1.0,
-		FVector2d(0.0, 0.0), slope1);*/
-
-	/*FStructHeightMapping mapping;
-	MappingByLevel(LandLevel, LandRangeMapping, mapping);
-	OutRatio = MappingFromRangeToRange(OutRatio, mapping);*/
-
-	/*float value = Noise->NWLandLayer0->GetNoise2D(X * scale, Y * scale);
-	OutRatio = FMath::Clamp<float>(value, 0.0, 1.0);*/
-	//OutRatio = value;
 
 	if (HasWater) {
 		float wRatio = GetWaterRatio(X, Y);
@@ -393,26 +350,19 @@ float ATerrainGenerator::GetAltitude(float X, float Y, float& OutRatioStd, float
 }
 
 float ATerrainGenerator::GetGradientRatioZ(UFastNoiseWrapper* NWP, float X, float Y, 
-	float SampleScale, float BaseRatio, float k, 
+	TFunction<float(float X, float Y)> GetRatioFunc,
+	float BaseRatio, float k, 
 	const FVector2d& BaseSlope, FVector2d& OutSlope)
 {
-	float value = GetLandLayer0Ratio(X, Y);
-	float valueX = GetLandLayer0Ratio(X + 1, Y);
-	float valueY = GetLandLayer0Ratio(X, Y + 1);
+	float value = GetRatioFunc(X, Y);
+	float valueX = GetRatioFunc(X + 1, Y);
+	float valueY = GetRatioFunc(X, Y + 1);
 
-	/*float value = NWP->GetNoise2D(X * SampleScale, Y * SampleScale);
-	float valueX = NWP->GetNoise2D((X + 1) * SampleScale, Y * SampleScale);
-	float valueY = NWP->GetNoise2D(X * SampleScale, (Y + 1) * SampleScale);
-
-	value = FMath::Clamp<float>(value, 0.0, 1.0);
-	valueX = FMath::Clamp<float>(valueX, 0.0, 1.0);
-	valueY = FMath::Clamp<float>(valueY, 0.0, 1.0);*/
 	float slopeX = (valueX - value) * TileAltitudeMultiplier / pGI->TerrainGridParam.TileSize;
 	float slopeY = (valueY - value) * TileAltitudeMultiplier / pGI->TerrainGridParam.TileSize;
 	OutSlope.Set(slopeX + BaseSlope.X, slopeY + BaseSlope.Y);
 
 	float m = OutSlope.Length();
-	//float Ratio = FMath::Exp(-m * m) * value;
 	float Ratio = value / (1.0 + m * k);
 	return BaseRatio + Ratio;
 }
@@ -420,12 +370,13 @@ float ATerrainGenerator::GetGradientRatioZ(UFastNoiseWrapper* NWP, float X, floa
 
 float ATerrainGenerator::CombineWaterLandRatio(float wRatio, float lRatio)
 {
-	float alpha = 1.0;
-	if (WaterBaseRatio < 0) {
-		alpha = 1 - wRatio / WaterBaseRatio;
-	}
+	/*float alpha = lRatio / WaterLandCombineRatio;
 	alpha = FMath::Clamp<float>(alpha, 0.0, 1.0);
-	float outRatio = wRatio + FMath::Lerp<float>(wRatio, lRatio, alpha);
+	float outRatio = FMath::Lerp<float>(wRatio, lRatio, alpha);*/
+
+	float outRatio = wRatio + lRatio;
+	outRatio = FMath::Clamp<float>(outRatio, -1.0, 1.0);
+
 	return outRatio;
 }
 
@@ -441,20 +392,6 @@ float ATerrainGenerator::GetLandLayer1Ratio(float X, float Y)
 	FStructHeightMapping mapping;
 	MappingByLevel(LandLayer1Level, LandLayer1RangeMapping, mapping);
 	return GetMappingHeightRatio(Noise->NWLandLayer1, mapping, X, Y, LandLayer1SampleScale);
-}
-
-float ATerrainGenerator::GetHighMountainRatio(float X, float Y)
-{
-	FStructHeightMapping mapping;
-	MappingByLevel(HighMountainLevel, HighRangeMapping, mapping);
-	return GetMappingHeightRatio(Noise->NWHighMountain, mapping, X, Y, HighMountainSampleScale);
-}
-
-float ATerrainGenerator::GetLowMountianRatio(float X, float Y)
-{
-	FStructHeightMapping mapping;
-	MappingByLevel(LowMountainLevel, LowRangeMapping, mapping);
-	return GetMappingHeightRatio(Noise->NWLowMountain, mapping, X, Y, LowMountainSampleScale);
 }
 
 float ATerrainGenerator::GetWaterRatio(float X, float Y)
@@ -1094,8 +1031,6 @@ void ATerrainGenerator::DigRiverLine()
 				continue;
 			}
 			
-			UE_LOG(TerrainGenerator, Warning, TEXT("j=%d"), j);
-
 			float BlockZRatioByNeighbor = FindRiverBlockZByNeighbor(CurrentLinePointIndex);
 			CurrentLineDepthRatio = CurrentLineDepthRatio > BlockZRatioByNeighbor ? CurrentLineDepthRatio : BlockZRatioByNeighbor;
 			UpdateRiverPointZ(CurrentLinePointIndex, CurrentLineDepthRatio);
@@ -1307,7 +1242,7 @@ void ATerrainGenerator::DigRiverPool()
 			Count++;
 		}
 		Progress = ProgressPassed + (float)(i + 1) / (float)RiverLinePointDatas.Num() * ProgressWeight_DigRiverPool;
-		DigRiverLineLoopData.HasInitialized = false;
+		DigRiverPoolLoopData.HasInitialized = false;
 	}
 
 	ProgressPassed += ProgressWeight_DigRiverPool;
@@ -1402,13 +1337,17 @@ int32 ATerrainGenerator::GetPointsDistance(int32 Index1, int32 Index2)
 
 void ATerrainGenerator::CreateVertexColorsForAMTB()
 {
-	if (TerrainMeshPointsLoopFunction(nullptr,
+	if (TerrainMeshPointsLoopFunction([this]() { InitCreateVertexColorsForAMTB(); },
 		[this](int32 i) { AddAMTBToVertexColor(i); },
 		CreateVertexColorsForAMTBLoopData,
 		Enum_TerrainGeneratorState::CreateTriangles,
 		true, ProgressWeight_CreateVertexColorsForAMTB)) {
 		UE_LOG(TerrainGenerator, Log, TEXT("CreateVertexColorsForAMTB done."));
 	}
+}
+
+void ATerrainGenerator::InitCreateVertexColorsForAMTB()
+{
 }
 
 //Add vertex Color(R:Altidude G:Moisture B:Temperature A:Biomes)
@@ -1418,11 +1357,42 @@ void ATerrainGenerator::AddAMTBToVertexColor(int32 Index)
 	float ZRatioStd = ZRatio * 0.5 + 0.5;
 	float X = GetPointAxialCoord(Index).X;
 	float Y = GetPointAxialCoord(Index).Y;
-	float Moisture = GetNoise2DStd(Noise->NWMoisture, X, Y, MoistureSampleScale, MoistureValueScale);
-	float Temperature = GetNoise2DStd(Noise->NWTemperature, X, Y, TemperatureSampleScale, TemperatureValueScale);
+	float Moisture = CalMoisture(X, Y);
+	float Temperature = CalTemperature(X, Y);
 	float Biomes = GetNoise2DStd(Noise->NWBiomes, X, Y, BiomesSampleScale, BiomesValueScale);
 	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, Biomes));
 	
+}
+
+float ATerrainGenerator::CalMoisture(int32 X, int32 Y)
+{
+	float Moisture = GetNoise2DStd(Noise->NWMoisture, X, Y, MoistureSampleScale, MoistureValueScale);
+	float WaterNoise = Noise->NWWater->GetNoise2D(X * WaterSampleScale, Y * WaterSampleScale);
+	WaterNoise *= MoistureValueScale;
+	WaterNoise = FMath::Clamp(WaterNoise, -1.0, 1.0);
+	FIntPoint key(X, Y);
+	int32 Index = TerrainMeshPointsIndices[key];
+	float ZRatio = TerrainMeshPointsData[Index].PositionZRatio;
+	ZRatio *= MoistureZRatioScale;
+	ZRatio = FMath::Clamp(ZRatio, -1.0, 0.0);
+	
+	float offset = WaterNoise + ZRatio;
+	offset = FMath::Clamp(offset, -1.0, 1.0);
+	offset = (offset + 1) * 0.5;
+	offset = 1.0 - offset;
+
+	Moisture = (Moisture + offset) * 0.5;
+	return Moisture;
+}
+
+float ATerrainGenerator::CalTemperature(int32 X, int32 Y)
+{
+	float Temperature = GetNoise2DStd(Noise->NWTemperature, X, Y, TemperatureSampleScale, TemperatureValueScale);
+	float Layer0Noise = Noise->NWLandLayer0->GetNoise2D(X * LandLayer0SampleScale, Y * LandLayer0SampleScale);
+	Layer0Noise = FMath::Clamp(Layer0Noise, 0.0, 1.0);
+	float scale = 1.0 - Layer0Noise;
+	Temperature *= scale;
+	return Temperature;
 }
 
 void ATerrainGenerator::CreateTriangles()
@@ -1658,18 +1628,183 @@ void ATerrainGenerator::CalAngleToUp(int32 Index)
 
 void ATerrainGenerator::CreateWaterfall()
 {
-	if (HasWaterfall && WaterfallClass) {
-		FindWaterfallPoints();
-		AddWaterfall();
+	if (HasWaterfall) {
+		CreateWaterfallPlanes();
+		//CreateWaterfallAnim();
 		if (WaterfallMistClass) {
 			AddWaterfallMist();
 		}
 	}
 
 	FTimerHandle TimerHandle;
-	WorkflowState = Enum_TerrainGeneratorState::CreateWater;
+	WorkflowState = Enum_TerrainGeneratorState::Done;
 	GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
 	UE_LOG(TerrainGenerator, Log, TEXT("Create waterfall done."));
+}
+
+void ATerrainGenerator::CreateWaterfallAnim()
+{
+	if (HasWaterfall && WaterfallClass) {
+		FindWaterfallPoints();
+		AddWaterfall();
+	}
+}
+
+void ATerrainGenerator::CreateWaterfallPlanes()
+{
+	for (int32 i = 0; i < RiverLinePointDatas.Num(); i++)
+	{
+		InitCreateWaterfall();
+		CreateNewWaterfallRender(i);
+		CreateWaterfallPlane(i);
+	}
+}
+
+void ATerrainGenerator::InitCreateWaterfall()
+{
+	CurrentWaterfallRadius = WaterfallRadiusMin;
+}
+
+void ATerrainGenerator::CreateNewWaterfallRender(int32 Index)
+{
+	FStructWaterfallRenderData Data;
+	FString NameStr;
+	NameStr.Append(TEXT("WaterfallMesh")).Append(FString::FromInt(Index));
+
+	Data.WaterfallMesh = NewObject<UProceduralMeshComponent>(this, FName(*NameStr));
+	Data.WaterfallMesh->SetupAttachment(TerrainMesh);
+	Data.WaterfallMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Data.WaterfallMesh->RegisterComponent();
+	WaterfallRenderDatas.Add(Data);
+}
+
+void ATerrainGenerator::CreateWaterfallPlane(int32 Index)
+{
+	CreateWaterfallVerticesAndNormals(Index);
+	CreateWaterfallTriangles(Index);
+	CreateWaterfallMesh(Index);
+	SetWaterfallMaterial(Index);
+}
+
+void ATerrainGenerator::CreateWaterfallVerticesAndNormals(int32 Index)
+{
+	FStructRiverLinePointData& Data = RiverLinePointDatas[Index];
+	Data.HasWaterfall = true;
+	float UVUnit = UVScale * WaterRange / GridRange;
+	float RetFlag = false;
+
+	for (int32 i = 0; i < Data.LinePointIndices.Num(); i++)
+	{
+		int32 PointIndex = Data.LinePointIndices[i];
+		
+		FVector OverPoint = GetWaterfallOverPoint(i, Data);
+		FVector Normal = TerrainMeshPointsData[PointIndex].Normal;
+		if (i + 1 < Data.LinePointIndices.Num()) {
+			FVector NextOverPoint = GetWaterfallOverPoint(i + 1, Data);
+			FVector ToNext = NextOverPoint - OverPoint;
+			float ToNextLen = ToNext.Length();
+			ToNext.Normalize();
+			if (i > 0) {
+				FVector PreOverPoint = GetWaterfallOverPoint(i - 1, Data);
+				FVector ToThis = OverPoint - PreOverPoint;
+				ToThis.Normalize();
+				ToNext = ToNext + ToThis;
+				ToNext.Normalize();
+				if (OverPoint.Z < WaterBase && PreOverPoint.Z > WaterBase) {
+					GetWaterPointByLineTrance(PreOverPoint, OverPoint, Data.WaterfallEnterWaterPoint);
+				}
+			}
+			FVector VertexDir = FVector::CrossProduct(Normal, ToNext);
+			VertexDir.Normalize();
+
+			FVector ToV = CurrentWaterfallRadius * VertexDir;
+			FVector ToV0 = ToV.RotateAngleAxisRad(0.0, ToNext);
+			FVector ToV1 = ToV0.RotateAngleAxisRad(PI / 2.0, ToNext);
+			FVector ToV2 = ToV1.RotateAngleAxisRad(PI / 2.0, ToNext);
+			FVector ToV3 = ToV2.RotateAngleAxisRad(PI / 2.0, ToNext);
+
+			FVector V0 = ToV0 + OverPoint;
+			FVector V1 = ToV1 * 0.2 + OverPoint;
+			FVector V2 = ToV2 + OverPoint;
+			FVector V3 = ToV3 * 0.2 + OverPoint;
+
+			WaterfallRenderDatas[Index].WaterfallVertices.Add(V0);
+			WaterfallRenderDatas[Index].WaterfallVertices.Add(V1);
+			WaterfallRenderDatas[Index].WaterfallVertices.Add(V2);
+			WaterfallRenderDatas[Index].WaterfallVertices.Add(V3);
+
+			ToV0.Normalize();
+			ToV1.Normalize();
+			ToV2.Normalize();
+			ToV3.Normalize();
+			WaterfallRenderDatas[Index].WaterfallNormals.Add(ToV0);
+			WaterfallRenderDatas[Index].WaterfallNormals.Add(ToV1);
+			WaterfallRenderDatas[Index].WaterfallNormals.Add(ToV2);
+			WaterfallRenderDatas[Index].WaterfallNormals.Add(ToV3);
+
+			float perimeter = 4.0 * FMath::Pow(2.0, 0.5) * CurrentWaterfallRadius;
+			float AngleRad = AngleBetweenVectors(FVector(0.0, 0.0, -1.0), ToNext);
+			float SinValue = FMath::Sin(AngleRad);
+			float HValue = ToNextLen * SinValue;
+
+			WaterfallRenderDatas[Index].WaterfallUVs.Add(FVector2D(0.0, (V0.Z + HValue) / perimeter));
+			WaterfallRenderDatas[Index].WaterfallUVs.Add(FVector2D(0.25, (V1.Z + HValue) / perimeter));
+			WaterfallRenderDatas[Index].WaterfallUVs.Add(FVector2D(0.5, (V2.Z + HValue) / perimeter));
+			WaterfallRenderDatas[Index].WaterfallUVs.Add(FVector2D(0.75, (V3.Z + HValue) / perimeter));
+		
+			if (V0.Z < WaterBase &&
+				V1.Z < WaterBase &&
+				V2.Z < WaterBase &&
+				V3.Z < WaterBase) {
+				Data.WaterfallRadius = CurrentWaterfallRadius;
+				break;
+			}
+		}
+		
+		CurrentWaterfallRadius = FMath::Min(CurrentWaterfallRadius + WaterfallRadiusStep, WaterfallRadiusMax);
+	}
+}
+
+FVector ATerrainGenerator::GetWaterfallOverPoint(int32 Index, const FStructRiverLinePointData& Data)
+{
+	int32 PointIndex = Data.LinePointIndices[Index];
+	FVector OverPoint = GetPointPosition(PointIndex);
+	OverPoint += TerrainMeshPointsData[PointIndex].Normal * WaterfallPlainOverTerrain;
+	return OverPoint;
+}
+
+void ATerrainGenerator::CreateWaterfallTriangles(int32 Index)
+{
+	for (int32 i = 0; i < WaterfallRenderDatas[Index].WaterfallVertices.Num() - 4; i += 4)
+	{
+		for (int32 j = 0; j < 4; j++)
+		{
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + j);
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + j + 4);
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + (j + 1) % 4);
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + (j + 1) % 4);
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + j + 4);
+			WaterfallRenderDatas[Index].WaterfallTriangles.Add(i + (j + 1) % 4 + 4);
+			
+		}
+	}
+}
+
+void ATerrainGenerator::CreateWaterfallMesh(int32 Index)
+{
+	WaterfallRenderDatas[Index].WaterfallMesh->CreateMeshSection_LinearColor(
+		0, 
+		WaterfallRenderDatas[Index].WaterfallVertices, 
+		WaterfallRenderDatas[Index].WaterfallTriangles, 
+		WaterfallRenderDatas[Index].WaterfallNormals, 
+		WaterfallRenderDatas[Index].WaterfallUVs,
+		TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+
+}
+
+void ATerrainGenerator::SetWaterfallMaterial(int32 Index)
+{
+	WaterfallRenderDatas[Index].WaterfallMesh->SetMaterial(0, WaterfallMaterialIns);
 }
 
 void ATerrainGenerator::FindWaterfallPoints()
@@ -1809,8 +1944,9 @@ void ATerrainGenerator::AddWaterfallMist()
 		FRotator Rot(0.0, 0.0, 0.0);
 		FVector Loc = Data.WaterfallEnterWaterPoint;
 		FTransform Trans(Rot, Loc, Scale);
-		ATerrainWaterfallMist* WaterfallMist = Cast<ATerrainWaterfallMist>(GetWorld()->SpawnActor(WaterfallMistClass, &Trans));
-		WaterfallMist->SetActive(true);
+		Data.WaterfallMist = Cast<ATerrainWaterfallMist>(GetWorld()->SpawnActor(WaterfallMistClass, &Trans));
+		Data.WaterfallMist->SetParamWaterfallRadius(FVector2D(Data.WaterfallRadius, Data.WaterfallRadius));
+		Data.WaterfallMist->SetActive(true);
 	}
 }
 
@@ -1925,15 +2061,23 @@ void ATerrainGenerator::Tick(float DeltaTime)
 
 }
 
+bool ATerrainGenerator::GetMeshPointByLineTrance(UProceduralMeshComponent* Mesh, FVector Start, FVector End, FVector& Loc)
+{
+	if (Mesh) {
+		FHitResult result;
+		FCollisionQueryParams params;
+		bool isHit = Mesh->LineTraceComponent(result, Start, End, params);
+		if (isHit) {
+			Loc.Set(result.Location.X, result.Location.Y, result.Location.Z);
+		}
+		return isHit;
+	}
+	return false;
+}
+
 bool ATerrainGenerator::GetTerrainPointByLineTrace(FVector Start, FVector End, FVector& Loc)
 {
-	FHitResult result;
-	FCollisionQueryParams params;
-	bool isHit = TerrainMesh->LineTraceComponent(result, Start, End, params);
-	if (isHit) {
-		Loc.Set(result.Location.X, result.Location.Y, result.Location.Z);
-	}
-	return isHit;
+	return GetMeshPointByLineTrance(TerrainMesh, Start, End, Loc);
 }
 
 bool ATerrainGenerator::GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2D, FVector& Loc)
@@ -1941,6 +2085,11 @@ bool ATerrainGenerator::GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2
 	FVector Start(Start2D.X, Start2D.Y, TileAltitudeMax);
 	FVector End(End2D.X, End2D.Y, -TileAltitudeMax);
 	return GetTerrainPointByLineTrace(Start, End, Loc);
+}
+
+bool ATerrainGenerator::GetWaterPointByLineTrance(FVector Start, FVector End, FVector& Loc)
+{
+	return GetMeshPointByLineTrance(WaterMesh, Start, End, Loc);
 }
 
 
@@ -1965,19 +2114,6 @@ void ATerrainGenerator::GetDebugRiverLinePointsAt(TArray<FVector>& LinePoints, i
 			LinePoints.Add(FVector(pos.X, pos.Y, TerrainMeshPointsData[Data.LinePointIndices[i]].PositionZ));
 		}
 	}
-}
-
-bool ATerrainGenerator::GetDebugWaterfallPointAt(FVector& WaterfallPoint, int32 Index)
-{
-	if (Index < RiverLinePointDatas.Num()) {
-		FStructRiverLinePointData Data = RiverLinePointDatas[Index];
-		if (Data.WaterfallPointIndex < 0) {
-			return false;
-		}
-		FVector2D pos = GetPointPosition2D(Data.WaterfallPointIndex);
-		WaterfallPoint.Set(pos.X, pos.Y, TerrainMeshPointsData[Data.WaterfallPointIndex].PositionZ);
-	}
-	return true;
 }
 
 bool ATerrainGenerator::GetDebugWaterfallTracePointAt(FVector& TraceStart, FVector& TraceEnd, int32 Index)

@@ -73,9 +73,6 @@ struct FStructRiverLinePointData
 	TArray<int32> LinePointIndices = {};
 
 	UPROPERTY(BlueprintReadOnly)
-	FVector WaterfallRefPoint = FVector();
-
-	UPROPERTY(BlueprintReadOnly)
 	bool HasWaterfall = false;
 
 	UPROPERTY(BlueprintReadOnly)
@@ -99,14 +96,32 @@ struct FStructRiverLinePointData
 	UPROPERTY(BlueprintReadOnly)
 	FVector WaterfallEnterWaterPoint = FVector();
 
-	UPROPERTY(BlueprintReadOnly)
-	int32 WaterfallPointIndex = -1;
-
-	UPROPERTY(BlueprintReadOnly)
-	FVector WaterfallDir = FVector();
-
 	class ATerrainWaterfall* Waterfall = nullptr;
 
 	class ATerrainWaterfallMist* WaterfallMist = nullptr;
 
+	UPROPERTY(BlueprintReadOnly)
+	float WaterfallRadius = 0.0;
+
+};
+
+USTRUCT(BlueprintType)
+struct FStructWaterfallRenderData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	class UProceduralMeshComponent* WaterfallMesh = nullptr;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FVector> WaterfallVertices = {};
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FVector2D> WaterfallUVs = {};
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<int32> WaterfallTriangles = {};
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FVector> WaterfallNormals = {};
 };

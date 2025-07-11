@@ -44,9 +44,8 @@ enum class Enum_TerrainGeneratorState : uint8
 
 	DrawLandMesh,
 
-	CreateWaterfall,
-
 	CreateWater,
+	CreateWaterfall,
 
 	CreateTree,
 
@@ -91,7 +90,6 @@ private:
 	float ZRatioMin = 0.0;
 	float ZRatioLandSum = 0.0;
 	int32 ZRatioLandPointCount = 0;
-	float ZRatioLandAvg = 0.0;
 	FStructHeightMapping ZRatioMapping = {};
 
 	TSet<int32> UpperRiverIndices = {};
@@ -117,6 +115,9 @@ private:
 	float CurrentLineDepthRatio = 0.0;
 	int32 CurrentLinePointIndex = 0;
 	float UnitLineRisingStep = 0.0;
+
+	TArray<FStructWaterfallRenderData> WaterfallRenderDatas = {};
+	float CurrentWaterfallRadius = 0.0;
 
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
@@ -178,16 +179,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData NormalizeNormalsLoopData;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
-	float LavaBaseRatio = 0.0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
-	float DesertBaseRatio = 0.1;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
-	float SwampBaseRatio = 0.05;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0.0"))
 	float MoistureSampleScale = 0.5;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
 	float MoistureValueScale = 3.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
+	float MoistureZRatioScale = 2.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0.0"))
 	float TemperatureSampleScale = 0.5;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
@@ -200,6 +197,8 @@ protected:
 	float AltitudeBlockRatio = 0.005;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0"))
 	int32 BlockExTimes = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
+	float WaterLandCombineRatio = 0.3;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float LandLayer0Level = 0.5;
@@ -213,20 +212,6 @@ protected:
 	float LandLayer1SampleScale = 1.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land")
 	FStructHeightMapping LandLayer1RangeMapping = { 0.35, 1.0, 0.0, 0.2, -0.2, 0.0 };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|HighMountain", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float HighMountainLevel = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|HighMountain", meta = (ClampMin = "0.0"))
-	float HighMountainSampleScale = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|HighMountain")
-	FStructHeightMapping HighRangeMapping = { 0.4, 0.7, 0.0, 1.0, -0.2, -0.2 };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|LowMountain", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float LowMountainLevel = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|LowMountain", meta = (ClampMin = "0.0"))
-	float LowMountainSampleScale = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|LowMountain")
-	FStructHeightMapping LowRangeMapping = { 0.5, 1.0, 0.0, 0.3, -0.4, 0.0 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water")
 	bool HasWater = false;
@@ -301,15 +286,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
 	bool HasWaterfall = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
-	float WaterfallSlopeRatio = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
-	float WaterfallAltitudeRatioUpper = 0.1;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0"))
-	float WaterfallAltitudeRatioLower = 0.05;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0"))
-	int32 WaterfallRefOffset = 5;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
 	int32 WaterfallPoolUnderWaterCountLimit = 10;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0", ClampMax = "1.0"))
@@ -325,6 +301,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float WaterfallFreefallTimeOffset = 1.0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallPlainOverTerrain = 0.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallRadiusMin = 150.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallRadiusMax = 900.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
+	float WaterfallRadiusStep = 30.0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialParameterCollection* TerrainMPC;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
@@ -333,6 +318,8 @@ protected:
 	UMaterialInstance* WaterMaterialIns;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialInstance* CausticsMaterialIns;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
+	UMaterialInstance* WaterfallMaterialIns;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CreateVertices = 0.05f;
@@ -456,18 +443,16 @@ private:
 	void CreateVertices();
 	bool CreateVertex(int32 X, int32 Y, float& OutRatioStd, float& OutRatio);
 	void AddVertex(FStructTerrainMeshPointData& Data, float& OutRatioStd, float& OutRatio);
-	//void AddRiverEndPoint(const FStructTerrainMeshPointData& Data);
 	void GetZRatioInfo(const FStructTerrainMeshPointData& Data);
 
 	float GetAltitude(float X, float Y, float& OutRatioStd, float& OutRatio);
-	float GetGradientRatioZ(class UFastNoiseWrapper* NWP, float X, float Y, float SampleScale, 
+	float GetGradientRatioZ(class UFastNoiseWrapper* NWP, float X, float Y, 
+		TFunction<float(float X, float Y)> GetRatioFunc,
 		float BaseRatio, float k, const FVector2d& BaseSlope, FVector2d& OutSlope);
 
 	float CombineWaterLandRatio(float wRatio, float lRatio);
 	float GetLandLayer0Ratio(float X, float Y);
 	float GetLandLayer1Ratio(float X, float Y);
-	float GetHighMountainRatio(float X, float Y);
-	float GetLowMountianRatio(float X, float Y);
 	float GetWaterRatio(float X, float Y);
 	float CalWaterBank(float Ratio);
 
@@ -552,7 +537,10 @@ private:
 	int32 GetPointsDistance(int32 Index1, int32 Index2);
 
 	void CreateVertexColorsForAMTB();
+	void InitCreateVertexColorsForAMTB();
 	void AddAMTBToVertexColor(int32 Index);
+	float CalMoisture(int32 X, int32 Y);
+	float CalTemperature(int32 X, int32 Y);
 
 	//Create Triangles
 	void CreateTriangles();
@@ -572,13 +560,21 @@ private:
 	void CalAngleToUp(int32 Index);
 
 	void CreateWaterfall();
+	void CreateWaterfallAnim();
+	void CreateWaterfallPlanes();
+	void InitCreateWaterfall();
+	void CreateNewWaterfallRender(int32 Index);
+	void CreateWaterfallPlane(int32 Index);
+	void CreateWaterfallVerticesAndNormals(int32 Index);
+	FVector GetWaterfallOverPoint(int32 Index, const FStructRiverLinePointData& Data);
+	void CreateWaterfallTriangles(int32 Index);
+	void CreateWaterfallMesh(int32 Index);
+	void SetWaterfallMaterial(int32 Index);
+
 	void FindWaterfallPoints();
 	void FindWaterfallPoint(int32 Index);
 	bool FindEnterWaterPoint(FStructRiverLinePointData& Data);
 	void TraceWaterfallPoint(FVector TraceStart, FVector TraceLine, FVector& TestLoc, float& TestAngle);
-	bool IsWaterfallPoint(int32& WaterfallPointIndex, int32 Index);
-	bool IsWaterfallEnd(int32& WaterfallPointIndex, int32 Index);
-	void DoAfterWaterfall(FStructRiverLinePointData& Data, int32 Index);
 	void AddWaterfall();
 	void AddWaterfallMist();
 
@@ -603,8 +599,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
+	bool GetMeshPointByLineTrance(UProceduralMeshComponent* Mesh, FVector Start, FVector End, FVector& Loc);
 	bool GetTerrainPointByLineTrace(FVector Start, FVector End, FVector& Loc);
 	bool GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2D, FVector& Loc);
+	bool GetWaterPointByLineTrance(FVector Start, FVector End, FVector& Loc);
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -612,9 +610,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void GetDebugRiverLinePointsAt(TArray<FVector>& LinePoints, int32 Index);
-
-	UFUNCTION(BlueprintCallable)
-	bool GetDebugWaterfallPointAt(FVector& WaterfallPoint, int32 Index);
 
 	UFUNCTION(BlueprintCallable)
 	bool GetDebugWaterfallTracePointAt(FVector& TraceStart, FVector& TraceEnd, int32 Index);

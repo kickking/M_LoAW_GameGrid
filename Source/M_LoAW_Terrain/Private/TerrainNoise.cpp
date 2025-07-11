@@ -18,9 +18,6 @@ bool ATerrainNoise::Create()
 {
 	NWLandLayer0 = NewObject<UFastNoiseWrapper>(this);
 	NWLandLayer1 = NewObject<UFastNoiseWrapper>(this);
-
-	NWHighMountain = NewObject<UFastNoiseWrapper>(this);
-	NWLowMountain = NewObject<UFastNoiseWrapper>(this);
 	NWRiverDirection = NewObject<UFastNoiseWrapper>(this);
 	NWRiverDepth = NewObject<UFastNoiseWrapper>(this);
 	NWWater = NewObject<UFastNoiseWrapper>(this);
@@ -30,7 +27,6 @@ bool ATerrainNoise::Create()
 	NWTree = NewObject<UFastNoiseWrapper>(this);
 
 	if (NWLandLayer0 != nullptr && NWLandLayer1 != nullptr &&
-		NWHighMountain != nullptr && NWLowMountain != nullptr && 
 		NWRiverDirection != nullptr && NWRiverDepth != nullptr && 
 		NWWater != nullptr && NWMoisture != nullptr && NWTemperature != nullptr && 
 		NWBiomes != nullptr && NWTree != nullptr) {
@@ -58,30 +54,6 @@ bool ATerrainNoise::Create()
 			NW_Land_Layer_1_CellularJitter,
 			NW_Land_Layer_1_CDF,
 			NW_Land_Layer_1_CRT);
-
-		NWHighMountain->SetupFastNoise(NWHighMountain_NoiseType,
-			NWHighMountain_NoiseSeed,
-			NWHighMountain_NoiseFrequency,
-			NWHighMountain_Interp,
-			NWHighMountain_FractalType,
-			NWHighMountain_Octaves,
-			NWHighMountain_Lacunarity,
-			NWHighMountain_Gain,
-			NWHighMountain_CellularJitter,
-			NWHighMountain_CDF,
-			NWHighMountain_CRT);
-
-		NWLowMountain->SetupFastNoise(NWLowMountain_NoiseType,
-			NWLowMountain_NoiseSeed,
-			NWLowMountain_NoiseFrequency,
-			NWLowMountain_Interp,
-			NWLowMountain_FractalType,
-			NWLowMountain_Octaves,
-			NWLowMountain_Lacunarity,
-			NWLowMountain_Gain,
-			NWLowMountain_CellularJitter,
-			NWLowMountain_CDF,
-			NWLowMountain_CRT);
 
 		NWRiverDirection->SetupFastNoise(NWRiverDirection_NoiseType,
 			NWRiverDirection_NoiseSeed,

@@ -38,28 +38,6 @@ private:
 	EFastNoise_CellularDistanceFunction NW_Land_Layer_1_CDF = EFastNoise_CellularDistanceFunction::Euclidean;
 	EFastNoise_CellularReturnType NW_Land_Layer_1_CRT = EFastNoise_CellularReturnType::CellValue;
 
-	//noise param for high mountain
-	EFastNoise_NoiseType NWHighMountain_NoiseType = EFastNoise_NoiseType::PerlinFractal;
-	EFastNoise_Interp NWHighMountain_Interp = EFastNoise_Interp::Quintic;
-	EFastNoise_FractalType NWHighMountain_FractalType = EFastNoise_FractalType::RigidMulti;
-	int32 NWHighMountain_Octaves = 6;
-	float NWHighMountain_Lacunarity = 2.0;
-	float NWHighMountain_Gain = 0.5;
-	float NWHighMountain_CellularJitter = 0.45;
-	EFastNoise_CellularDistanceFunction NWHighMountain_CDF = EFastNoise_CellularDistanceFunction::Euclidean;
-	EFastNoise_CellularReturnType NWHighMountain_CRT = EFastNoise_CellularReturnType::CellValue;
-
-	//noise param for low mountain
-	EFastNoise_NoiseType NWLowMountain_NoiseType = EFastNoise_NoiseType::PerlinFractal;
-	EFastNoise_Interp NWLowMountain_Interp = EFastNoise_Interp::Quintic;
-	EFastNoise_FractalType NWLowMountain_FractalType = EFastNoise_FractalType::RigidMulti;
-	int32 NWLowMountain_Octaves = 6;
-	float NWLowMountain_Lacunarity = 2.0;
-	float NWLowMountain_Gain = 0.5;
-	float NWLowMountain_CellularJitter = 0.45;
-	EFastNoise_CellularDistanceFunction NWLowMountain_CDF = EFastNoise_CellularDistanceFunction::Euclidean;
-	EFastNoise_CellularReturnType NWLowMountain_CRT = EFastNoise_CellularReturnType::CellValue;
-
 	//noise param for river direction
 	EFastNoise_NoiseType NWRiverDirection_NoiseType = EFastNoise_NoiseType::PerlinFractal;
 	EFastNoise_Interp NWRiverDirection_Interp = EFastNoise_Interp::Quintic;
@@ -149,16 +127,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|Land", meta = (ClampMin = "0.0"))
 	float NW_Land_Layer_1_NoiseFrequency = 0.02;
 
-	//Noise variables BP for high mountain
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|HighMountain")
-	int32 NWHighMountain_NoiseSeed = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|HighMountain", meta = (ClampMin = "0.0"))
-	float NWHighMountain_NoiseFrequency = 0.005;
-	//Noise variables BP for low mountain
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|LowMountain")
-	int32 NWLowMountain_NoiseSeed = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|LowMountain", meta = (ClampMin = "0.0"))
-	float NWLowMountain_NoiseFrequency = 0.01;
 	//Noise variables BP for river direction
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Noise|RiverDirection")
 	int32 NWRiverDirection_NoiseSeed = 0;
@@ -198,8 +166,6 @@ protected:
 public:
 	UFastNoiseWrapper* NWLandLayer0 = nullptr;
 	UFastNoiseWrapper* NWLandLayer1 = nullptr;
-	UFastNoiseWrapper* NWHighMountain = nullptr;
-	UFastNoiseWrapper* NWLowMountain = nullptr;
 	UFastNoiseWrapper* NWRiverDirection = nullptr;
 	UFastNoiseWrapper* NWRiverDepth = nullptr;
 	UFastNoiseWrapper* NWWater = nullptr;
