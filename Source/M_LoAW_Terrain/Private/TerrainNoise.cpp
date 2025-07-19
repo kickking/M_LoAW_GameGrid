@@ -23,13 +23,12 @@ bool ATerrainNoise::Create()
 	NWWater = NewObject<UFastNoiseWrapper>(this);
 	NWMoisture = NewObject<UFastNoiseWrapper>(this);
 	NWTemperature = NewObject<UFastNoiseWrapper>(this);
-	NWBiomes = NewObject<UFastNoiseWrapper>(this);
 	NWTree = NewObject<UFastNoiseWrapper>(this);
 
 	if (NWLandLayer0 != nullptr && NWLandLayer1 != nullptr &&
 		NWRiverDirection != nullptr && NWRiverDepth != nullptr && 
 		NWWater != nullptr && NWMoisture != nullptr && NWTemperature != nullptr && 
-		NWBiomes != nullptr && NWTree != nullptr) {
+		NWTree != nullptr) {
 
 		NWLandLayer0->SetupFastNoise(NW_Land_Layer_0_NoiseType,
 			NW_Land_Layer_0_NoiseSeed,
@@ -114,18 +113,6 @@ bool ATerrainNoise::Create()
 			NWTemperature_CellularJitter,
 			NWTemperature_CDF,
 			NWTemperature_CRT);
-
-		NWBiomes->SetupFastNoise(NWBiomes_NoiseType,
-			NWBiomes_NoiseSeed,
-			NWBiomes_NoiseFrequency,
-			NWBiomes_Interp,
-			NWBiomes_FractalType,
-			NWBiomes_Octaves,
-			NWBiomes_Lacunarity,
-			NWBiomes_Gain,
-			NWBiomes_CellularJitter,
-			NWBiomes_CDF,
-			NWBiomes_CRT);
 
 		NWTree->SetupFastNoise(NWTree_NoiseType,
 			NWTree_NoiseSeed,

@@ -70,6 +70,9 @@ void AGameGridGenerator::DoWorkFlow()
 	case Enum_GameGridGeneratorState::CalGridNormal:
 		CalGridNormal();
 		break;
+	case Enum_GameGridGeneratorState::SetGridTT:
+		SetGridTT();
+		break;
 	case Enum_GameGridGeneratorState::SetGridAreaBlockLevel:
 		SetGridAreaBlockLevel();
 		break;
@@ -156,6 +159,7 @@ void AGameGridGenerator::InitLoopData()
 	FlowControlUtility::InitLoopData(CreateGridPointsLoopData);
 	FlowControlUtility::InitLoopData(SetGridPosZLoopData);
 	FlowControlUtility::InitLoopData(CalGridNormalLoopData);
+	FlowControlUtility::InitLoopData(SetGridTTLoopData);
 
 	FlowControlUtility::InitLoopData(SetGridAreaBlockLevelLoopData);
 	FlowControlUtility::InitLoopData(SetGridAreaBlockLevelExLoopData);
@@ -364,7 +368,7 @@ void AGameGridGenerator::CalGridNormal()
 {
 	if (GameGridPointsLoopFunction(nullptr, [this](int32 i) { CalTileNormal(i); },
 		CalGridNormalLoopData, 
-		Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
+		Enum_GameGridGeneratorState::SetGridTT,
 		true, ProgressWeight_CalGridNormal)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("CalGridNormal done!"));
 	}
@@ -385,6 +389,23 @@ void AGameGridGenerator::CalTileNormal(int32 Index)
 
 	float DotProduct = FVector::DotProduct(GridInstMesh->GetUpVector(), TileNormal);
 	Data.AngleToUp = acosf(DotProduct);
+}
+
+void AGameGridGenerator::SetGridTT()
+{
+	if (GameGridPointsLoopFunction(nullptr, [this](int32 i) { SetTileTT(i); },
+		SetGridTTLoopData,
+		Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
+		true, ProgressWeight_SetGridTT)) {
+		UE_LOG(GameGridGenerator, Log, TEXT("Set grid terrain type done!"));
+	}
+}
+
+void AGameGridGenerator::SetTileTT(int32 Index)
+{
+	FVector2D Pos2D = GetPointPosition2D(Index);
+	FStructGameGridPointData& Data = GameGridPointsData[Index];
+	Data.TerrainType = pTG->GetTerrainType(Pos2D);
 }
 
 void AGameGridGenerator::SetGridAreaBlockLevel()
@@ -418,7 +439,7 @@ bool AGameGridGenerator::CheckTileBlock(int32 CheckIndex, float UpperRatio, floa
 bool AGameGridGenerator::SetTileAreaBlock(int32 Index, int32 CheckIndex, int32 BlockLevel)
 {
 	bool flag = CheckTileBlock(CheckIndex,
-		AreaBlockAltitudeUpperRatio, AreaBlockAltitudeLowerRatio, AreaBlockSlopeRatio);
+		AreaBlockAltitudeUpperRatio, pTG->GetShallowWaterRatio(), AreaBlockSlopeRatio);
 	if (flag) {
 		FStructGameGridPointData& Data = GameGridPointsData[Index];
 		Data.AreaBlockLevel = BlockLevel;
@@ -1114,7 +1135,8 @@ int32 AGameGridGenerator::AddNormalRotISM(int32 Index, UInstancedStaticMeshCompo
 
 	FStructGameGridPointData Data = GameGridPointsData[Index];
 	FVector Loc(GetPointPosition2D(Index).X, GetPointPosition2D(Index).Y, Data.AvgPositionZ + ZOffset);
-	FVector Scale(GridTileInstanceScale);
+	FVector Scale(GridTileInstanceScale * InstanceScaleMultiplier);
+	
 	FVector UpVec(0.f, 0.f, 1.0);
 
 	FVector RotationAxis = FVector::CrossProduct(UpVec, Data.Normal);
@@ -1175,6 +1197,16 @@ bool AGameGridGenerator::IsIsland(int32 Index)
 
 void AGameGridGenerator::AddTileInstanceData(int32 TileIndex, int32 InstanceIndex)
 {
+	if (GridShowMode == Enum_GridShowMode::TerrainType) {
+		AddTileInstanceDataTT(TileIndex, InstanceIndex);
+	}
+	else {
+		AddTileInstanceDataBlock(TileIndex, InstanceIndex);
+	}
+}
+
+void AGameGridGenerator::AddTileInstanceDataBlock(int32 TileIndex, int32 InstanceIndex)
+{
 	float H = 0.0;
 	if (GridShowMode == Enum_GridShowMode::AreaBlock) {
 		if (!GameGridPointsData[TileIndex].IsLand) {
@@ -1199,11 +1231,59 @@ void AGameGridGenerator::AddTileInstanceData(int32 TileIndex, int32 InstanceInde
 		else {
 			H = 240.0;
 		}
-		
+
 	}
 
 	FLinearColor LinearColor = UKismetMathLibrary::HSVToRGB(H, 1.0, 1.0, 1.0);
 
+	TArray<float> CustomData = { LinearColor.R, LinearColor.G, LinearColor.B };
+	GridInstMesh->SetCustomData(InstanceIndex, CustomData, true);
+}
+
+void AGameGridGenerator::AddTileInstanceDataTT(int32 TileIndex, int32 InstanceIndex)
+{
+	FLinearColor LinearColor(0.0, 0.0, 0.0);
+	switch (GameGridPointsData[TileIndex].TerrainType)
+	{
+	case Enum_TerrainType::Mountain:
+		LinearColor = TT_Mountain_Color;
+		break;
+	case Enum_TerrainType::ShallowWater:
+		LinearColor = TT_ShallowWater_Color;
+		break;
+	case Enum_TerrainType::DeepWater:
+		LinearColor = TT_DeepWater_Color;
+		break;
+	case Enum_TerrainType::Lava:
+		LinearColor = TT_Lava_Color;
+		break;
+	case Enum_TerrainType::DryGrass:
+		LinearColor = TT_DryGrass_Color;
+		break;
+	case Enum_TerrainType::Swamp:
+		LinearColor = TT_Swamp_Color;
+		break;
+	case Enum_TerrainType::Desert:
+		LinearColor = TT_Desert_Color;
+		break;
+	case Enum_TerrainType::Grass:
+		LinearColor = TT_Grass_Color;
+		break;
+	case Enum_TerrainType::Coast:
+		LinearColor = TT_Coast_Color;
+		break;
+	case Enum_TerrainType::Gobi:
+		LinearColor = TT_Gobi_Color;
+		break;
+	case Enum_TerrainType::Tundra:
+		LinearColor = TT_Tundra_Color;
+		break;
+	case Enum_TerrainType::Snow:
+		LinearColor = TT_Snow_Color;
+		break;
+	default:
+		break;
+	}
 	TArray<float> CustomData = { LinearColor.R, LinearColor.G, LinearColor.B };
 	GridInstMesh->SetCustomData(InstanceIndex, CustomData, true);
 }

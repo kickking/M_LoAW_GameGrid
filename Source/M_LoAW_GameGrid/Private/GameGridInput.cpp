@@ -27,13 +27,13 @@ AGameGridInput::AGameGridInput()
 // Called when the game starts or when spawned
 void AGameGridInput::BeginPlay()
 {
-	Super::BeginPlay();
 	if (!GetGameInstance() || !GetGameGridGenerator() || !GetTerrainInput() || 
 		!EnablePlayer() || !AddInputMappingContext() ||
 		!BindEnchancedInputAction()) {
 		UE_LOG(GameGridInput, Warning, TEXT("AGameGridInput::BeginPlay() Error!"));
 		return;
 	}
+	Super::BeginPlay();
 }
 
 void AGameGridInput::BindDelegate()

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "M_LoAW_Terrain/Public/TerrainGenerator.h"
 #include "GameGridStructDefine.generated.h"
 
 USTRUCT(BlueprintType)
@@ -51,4 +52,7 @@ struct FStructGameGridPointData
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 FlyingBlockLevel = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	Enum_TerrainType TerrainType = Enum_TerrainType::None;
 };

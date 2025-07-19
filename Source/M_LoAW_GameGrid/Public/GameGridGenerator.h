@@ -21,6 +21,7 @@ enum class Enum_GameGridGeneratorState : uint8
 	WaitTerrain,
 	SetGridPosZ,
 	CalGridNormal,
+	SetGridTT,
 
 	SetGridAreaBlockLevel,
 	SetGridAreaBlockLevelEx,
@@ -52,6 +53,7 @@ enum class Enum_GridShowMode : uint8
 	BuildingBlock,
 	AreaBlock,
 	FlyingBlock,
+	TerrainType,
 };
 
 UCLASS()
@@ -117,6 +119,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData CalGridNormalLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData SetGridTTLoopData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData SetGridAreaBlockLevelLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData SetGridAreaBlockLevelExLoopData;
@@ -156,12 +161,13 @@ protected:
 	float GridInstMeshOffsetZ = 50.0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|Params")
 	float MouseOverGridOffsetZ = 55.0;
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|Params")
+	float InstanceScaleMultiplier = 0.5;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
 	float AreaBlockAltitudeUpperRatio = 0.3;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
-	float AreaBlockAltitudeLowerRatio = -0.05;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
+	float AreaBlockAltitudeLowerRatio = -0.05;*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float AreaBlockSlopeRatio = 0.3;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "0"))
@@ -181,6 +187,32 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Flying", meta = (ClampMin = "0"))
 	int32 FlyingBlockExTimes = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Mountain_Color = FLinearColor(0.55, 0.47, 0.32);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_ShallowWater_Color = FLinearColor(0.5, 0.8, 0.8);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_DeepWater_Color = FLinearColor(0.02, 0.04, 0.06);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Lava_Color = FLinearColor(1.0, 0.15, 0.07);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_DryGrass_Color = FLinearColor(0.17, 0.13, 0.1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Swamp_Color = FLinearColor(0.04, 0.06, 0.02);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Desert_Color = FLinearColor(0.4, 0.2, 0.1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Grass_Color = FLinearColor(0.3, 0.3, 0.1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Coast_Color = FLinearColor(0.38, 0.38, 0.2);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Gobi_Color = FLinearColor(0.34, 0.34, 0.29);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Tundra_Color = FLinearColor(0.04, 0.03, 0.02);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
+	FLinearColor TT_Snow_Color = FLinearColor(0.76, 0.76, 0.76);
+
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CreateGridPoints = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
@@ -188,11 +220,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_CalGridNormal = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	float ProgressWeight_SetGridTT = 0.08f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridAreaBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetGridAreaBlockLevelEx = 0.07f;
+	float ProgressWeight_SetGridAreaBlockLevelEx = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_FindGridIsland = 0.07f;
+	float ProgressWeight_FindGridIsland = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridBuildingBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
@@ -200,9 +234,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridFlyingBlockLevel = 0.1f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetGridFlyingBlockLevelEx = 0.07f;
+	float ProgressWeight_SetGridFlyingBlockLevelEx = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_FindGridFlyingIsland = 0.07f;
+	float ProgressWeight_FindGridFlyingIsland = 0.05f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
 	float ProgressWeight_AddInstances = 0.02f;
 
@@ -268,6 +302,9 @@ private:
 	void CalGridNormal();
 	void CalTileNormal(int32 Index);
 
+	void SetGridTT();
+	void SetTileTT(int32 Index);
+
 	void SetGridAreaBlockLevel();
 	void InitSetGridAreaBlockLevel();
 	bool CheckTileBlock(int32 CheckIndex, float UpperRatio, float LowerRatio, float SlopeRatio);
@@ -328,6 +365,8 @@ private:
 	bool IsBlock(int32 Index);
 	bool IsIsland(int32 Index);
 	void AddTileInstanceData(int32 TileIndex, int32 InstanceIndex);
+	void AddTileInstanceDataBlock(int32 TileIndex, int32 InstanceIndex);
+	void AddTileInstanceDataTT(int32 TileIndex, int32 InstanceIndex);
 
 	FVector2D GetPointPosition2D(int32 Index);
 	FVector2D GetTileVertexPosition2D(int32 PointIndex, int32 VertexIndex);

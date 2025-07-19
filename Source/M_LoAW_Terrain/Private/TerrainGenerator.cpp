@@ -122,7 +122,7 @@ void ATerrainGenerator::InitWorkflow()
 	InitTileParameter();
 	InitLoopData();
 	InitReceiveDecal();
-	InitBaseRatio();
+	InitLandBlendParam();
 	InitWater();
 	InitProgress();
 
@@ -213,8 +213,16 @@ void ATerrainGenerator::InitReceiveDecal()
 	WaterMesh->SetReceivesDecals(false);
 }
 
-void ATerrainGenerator::InitBaseRatio()
+void ATerrainGenerator::InitLandBlendParam()
 {
+	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("MoistureBlendThresholdLow"),
+		MoistureBlendThresholdLow);
+	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("MoistureBlendThresholdHigh"),
+		MoistureBlendThresholdHigh);
+	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("TempratureBlendThresholdLow"),
+		TempratureBlendThresholdLow);
+	UKismetMaterialLibrary::SetScalarParameterValue(this, TerrainMPC, TEXT("TempratureBlendThresholdHigh"),
+		TempratureBlendThresholdHigh);
 }
 
 void ATerrainGenerator::InitWater()
@@ -1359,8 +1367,7 @@ void ATerrainGenerator::AddAMTBToVertexColor(int32 Index)
 	float Y = GetPointAxialCoord(Index).Y;
 	float Moisture = CalMoisture(X, Y);
 	float Temperature = CalTemperature(X, Y);
-	float Biomes = GetNoise2DStd(Noise->NWBiomes, X, Y, BiomesSampleScale, BiomesValueScale);
-	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, Biomes));
+	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, 0.0));
 	
 }
 
@@ -1382,6 +1389,8 @@ float ATerrainGenerator::CalMoisture(int32 X, int32 Y)
 	offset = 1.0 - offset;
 
 	Moisture = (Moisture + offset) * 0.5;
+	Moisture = FMath::Clamp(Moisture, 0.0, 1.0);
+
 	return Moisture;
 }
 
@@ -1392,6 +1401,8 @@ float ATerrainGenerator::CalTemperature(int32 X, int32 Y)
 	Layer0Noise = FMath::Clamp(Layer0Noise, 0.0, 1.0);
 	float scale = 1.0 - Layer0Noise;
 	Temperature *= scale;
+	Temperature = FMath::Clamp(Temperature, 0.0, 1.0);
+
 	return Temperature;
 }
 
@@ -2092,7 +2103,103 @@ bool ATerrainGenerator::GetWaterPointByLineTrance(FVector Start, FVector End, FV
 	return GetMeshPointByLineTrance(WaterMesh, Start, End, Loc);
 }
 
+Enum_TerrainType ATerrainGenerator::GetTerrainType(FVector2D Point)
+{
+	Enum_TerrainType TT = Enum_TerrainType::None;
+	Quad quad = Quad::PosToQuad(Point, TileSizeMultiplier);
+	float X = quad.GetCoord().X;
+	float Y = quad.GetCoord().Y;
+	FIntPoint key(X, Y);
+	if (TerrainMeshPointsIndices.Contains(key)) {
+		int32 Index = TerrainMeshPointsIndices[key];
+		float ZRatio = TerrainMeshPointsData[Index].PositionZRatio;
+		float Moisture = CalMoisture(X, Y);
+		float Temperature = CalTemperature(X, Y);
 
+		if (ZRatio > 0.001) {
+			TT = Enum_TerrainType::Mountain;
+		}
+		else if (ZRatio < WaterBaseRatio && ZRatio > ShallowWaterRatio) {
+			TT = Enum_TerrainType::ShallowWater;
+		}
+		else if (ZRatio <= ShallowWaterRatio) {
+			TT = Enum_TerrainType::DeepWater;
+		}
+		else {
+			TT = GetPlainType(Moisture, Temperature);
+		}
+	}
+
+	return TT;
+}
+
+Enum_TerrainType ATerrainGenerator::GetPlainType(float Moisture, float Temperature)
+{
+	int32 MoistureStep = GetScalarStep(Moisture, MoistureBlendThresholdLow, MoistureBlendThresholdHigh);
+	int32 TemperatureStep = GetScalarStep(Temperature, TempratureBlendThresholdLow, TempratureBlendThresholdHigh);
+	
+	Enum_TerrainType TT = Enum_TerrainType::Grass;
+
+	switch (TemperatureStep)
+	{
+	case -1:
+		switch (MoistureStep)
+		{
+		case -1:
+			TT = Enum_TerrainType::Gobi;
+			break;
+		case 0:
+			TT = Enum_TerrainType::Tundra;
+			break;
+		case 1:
+			TT = Enum_TerrainType::Snow;
+			break;
+		}
+		break;
+	case 0:
+		switch (MoistureStep)
+		{
+		case -1:
+			TT = Enum_TerrainType::Desert;
+			break;
+		case 0:
+			TT = Enum_TerrainType::Grass;
+			break;
+		case 1:
+			TT = Enum_TerrainType::Coast;
+			break;
+		}
+		break;
+	case 1:
+		switch (MoistureStep)
+		{
+		case -1:
+			TT = Enum_TerrainType::Lava;
+			break;
+		case 0:
+			TT = Enum_TerrainType::DryGrass;
+			break;
+		case 1:
+			TT = Enum_TerrainType::Swamp;
+			break;
+		}
+		break;
+	}
+	
+	return TT;
+}
+
+int32 ATerrainGenerator::GetScalarStep(float Scalar, float Lower, float Upper)
+{
+	int32 Ret = 0;
+	if (Scalar <= Lower) {
+		Ret = -1;
+	}
+	else if (Scalar > Upper) {
+		Ret = 1;
+	}
+	return Ret;
+}
 
 void ATerrainGenerator::GetDebugRiverLineEndPoints(TArray<FVector>& Points)
 {

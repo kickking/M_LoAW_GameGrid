@@ -53,6 +53,26 @@ enum class Enum_TerrainGeneratorState : uint8
 	Error
 };
 
+UENUM(BlueprintType)
+enum class Enum_TerrainType : uint8
+{
+	Mountain,
+	ShallowWater,
+	DeepWater,
+
+	Lava,
+	DryGrass,
+	Swamp,
+	Desert,
+	Grass,
+	Coast,
+	Gobi,
+	Tundra,
+	Snow,
+
+	None
+};
+
 UCLASS()
 class M_LOAW_TERRAIN_API ATerrainGenerator : public AActor
 {
@@ -189,10 +209,6 @@ protected:
 	float TemperatureSampleScale = 0.5;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
 	float TemperatureValueScale = 3.0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0.0"))
-	float BiomesSampleScale = 0.5;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain")
-	float BiomesValueScale = 3.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float AltitudeBlockRatio = 0.005;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain", meta = (ClampMin = "0"))
@@ -212,6 +228,15 @@ protected:
 	float LandLayer1SampleScale = 1.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land")
 	FStructHeightMapping LandLayer1RangeMapping = { 0.35, 1.0, 0.0, 0.2, -0.2, 0.0 };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MoistureBlendThresholdLow = 0.35;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MoistureBlendThresholdHigh = 0.65;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float TempratureBlendThresholdLow = 0.35;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Land", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float TempratureBlendThresholdHigh = 0.65;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water")
 	bool HasWater = false;
@@ -225,6 +250,8 @@ protected:
 	FStructHeightMapping WaterRangeMapping = { -0.6, -0.4, -0.4, 0.0, 0.2, 0.2 };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water", meta = (ClampMin = "-1.0", ClampMax = "0.0"))
 	float WaterBaseRatio = -0.025;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water", meta = (ClampMin = "-1.0", ClampMax = "0.0"))
+	float ShallowWaterRatio = -0.07;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water", meta = (ClampMin = "1"))
 	int32 WaterNumRows = 10;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|Water", meta = (ClampMin = "1"))
@@ -415,6 +442,10 @@ public:
 		return WaterBase;
 	}
 
+	FORCEINLINE float GetShallowWaterRatio() {
+		return ShallowWaterRatio;
+	}
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -434,7 +465,7 @@ private:
 	void InitLoopData();
 	void InitBlockLevelExLoopDatas();
 	void InitReceiveDecal();
-	void InitBaseRatio();
+	void InitLandBlendParam();
 	void InitWater();
 	void SetWaterZ();
 	void InitProgress();
@@ -603,6 +634,12 @@ public:
 	bool GetTerrainPointByLineTrace(FVector Start, FVector End, FVector& Loc);
 	bool GetTerrainPointBy2DPos(FVector2D Start2D, FVector2D End2D, FVector& Loc);
 	bool GetWaterPointByLineTrance(FVector Start, FVector End, FVector& Loc);
+
+public:
+	Enum_TerrainType GetTerrainType(FVector2D Point);
+private:
+	Enum_TerrainType GetPlainType(float Moisture, float Temperature);
+	int32 GetScalarStep(float Scalar, float Lower, float Upper);
 
 public:
 	UFUNCTION(BlueprintCallable)
