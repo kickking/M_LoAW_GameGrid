@@ -6,6 +6,7 @@
 #include "GameGridStructDefine.h"
 #include "M_LoAW_Terrain/Public/AStarUtility.h"
 #include "M_LoAW_GridData/Public/Hex.h"
+#include "M_LoAW_Terrain/Public/TerrainGenerator.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -21,7 +22,10 @@ enum class Enum_GameGridGeneratorState : uint8
 	WaitTerrain,
 	SetGridPosZ,
 	CalGridNormal,
+
 	SetGridTT,
+	SetGridTTEdge,
+	AddTreeInstances,
 
 	SetGridAreaBlockLevel,
 	SetGridAreaBlockLevelEx,
@@ -41,7 +45,7 @@ enum class Enum_GameGridGeneratorState : uint8
 
 	FindGridFlyingIsland,
 
-	AddInstances,
+	AddGridInstances,
 	
 	Done,
 	Error
@@ -70,6 +74,8 @@ private:
 	Enum_GameGridGeneratorState WorkflowState = Enum_GameGridGeneratorState::InitWorkflow;
 
 	class ATerrainGenerator* pTG;
+
+	int32 TTEdgeLevelMax = 1;
 
 	int32 StepTotalCount = MAX_int32;
 	float ProgressPassed = 0.f;
@@ -120,6 +126,10 @@ protected:
 	FStructLoopData CalGridNormalLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData SetGridTTLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData SetGridTTEdgeLoopData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
+	FStructLoopData AddTreeInstancesLoopData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData SetGridAreaBlockLevelLoopData;
@@ -139,6 +149,7 @@ protected:
 	FStructLoopData SetGridFlyingBlockLevelExLoopData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData FindGridFlyingIsLandLoopData;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")
 	FStructLoopData AddGridInstancesLoopData;
 
@@ -150,6 +161,8 @@ protected:
 	bool bShowBlock = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Common")
 	bool bShowIsland = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Common")
+	bool bShowTree = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Common")
 	Enum_GridShowMode GridShowMode = Enum_GridShowMode::AreaBlock;
 
@@ -166,8 +179,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
 	float AreaBlockAltitudeUpperRatio = 0.3;
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "-1.0", ClampMax = "1.0"))
-	float AreaBlockAltitudeLowerRatio = -0.05;*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float AreaBlockSlopeRatio = 0.3;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Block|Area", meta = (ClampMin = "0"))
@@ -212,33 +223,41 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom|TerrainType")
 	FLinearColor TT_Snow_Color = FLinearColor(0.76, 0.76, 0.76);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree")
+	class AGameGridTreeGenerator* TreeGenerator;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree", meta = (ClampMin = "0.0"))
+	float TTEdgeLevelOnTreeNum = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_CreateGridPoints = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridPosZ = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_CalGridNormal = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_SetGridTT = 0.08f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ProgressWeight_SetGridTT = 0.04f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ProgressWeight_SetGridTTEdge = 0.04f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ProgressWeight_AddTreeInstances = 0.01f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridAreaBlockLevel = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridAreaBlockLevelEx = 0.05f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_FindGridIsland = 0.05f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridBuildingBlockLevel = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridBuildingBlockLevelEx = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridFlyingBlockLevel = 0.1f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_SetGridFlyingBlockLevelEx = 0.05f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ProgressWeight_FindGridFlyingIsland = 0.05f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0", ClampMax = "1.0"))
-	float ProgressWeight_AddInstances = 0.02f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Progress", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ProgressWeight_AddGridInstances = 0.01f;
 
 public:	
 	// Sets default values for this actor's properties
@@ -276,6 +295,8 @@ private:
 
 	void InitWorkflow();
 	bool GetGameInstance();
+	bool InitTree();
+
 	void InitProgress();
 	void InitLoopData();
 	void InitExLoopDatas(int32 ExTimes, const FStructLoopData& Data, 
@@ -304,6 +325,20 @@ private:
 
 	void SetGridTT();
 	void SetTileTT(int32 Index);
+
+	void SetGridTTEdge();
+	void InitSetGridTTEdge();
+	void SetTileTTEdgeByNeighbors(int32 Index);
+	bool SetTileTTEdgeByNeighbor(int32 Index, int32 NeighborRangeIndex);
+	bool SetTileTTEdgeLevel(int32 Index, int32 CheckIndex, int32 Level);
+	bool CheckTileTTEdge(int32 Index, int32 CheckIndex);
+
+	void AddTreeInstances();
+	void InitAddTreeInstances();
+	void AddTileTreeInstanceInRange(int32 Index);
+	int32 AddTreeInstance(int32 Index, FStructGameGridPointData& Data, struct FStructTreeRecord& Record);
+	int32 GetTreeNum(const FStructGameGridPointData& Data);
+	void AddTreeInstanceData(int32 PointIndex, int32 InstanceIndex, const struct FStructTreeRecord& Record);
 
 	void SetGridAreaBlockLevel();
 	void InitSetGridAreaBlockLevel();

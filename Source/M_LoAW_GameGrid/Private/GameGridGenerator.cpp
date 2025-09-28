@@ -6,10 +6,13 @@
 #include "M_LoAW_Terrain/Public/TerrainGenerator.h"
 #include "M_LoAW_GridData/Public/Hex.h"
 #include "M_LoAW_GridData/Public/HexGridCreator.h"
+#include "M_LoAW_GameGrid/Public/GameGridTerrainTypeTree.h"
+#include "M_LoAW_GameGrid/Public/GameGridTreeGenerator.h"
 
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Kismet/GameplayStatics.h>
 #include <Kismet/KismetMathLibrary.h>
+#include <Math/UnrealMathUtility.h>
 
 DEFINE_LOG_CATEGORY(GameGridGenerator);
 
@@ -73,6 +76,12 @@ void AGameGridGenerator::DoWorkFlow()
 	case Enum_GameGridGeneratorState::SetGridTT:
 		SetGridTT();
 		break;
+	case Enum_GameGridGeneratorState::SetGridTTEdge:
+		SetGridTTEdge();
+		break;
+	case Enum_GameGridGeneratorState::AddTreeInstances:
+		AddTreeInstances();
+		break;
 	case Enum_GameGridGeneratorState::SetGridAreaBlockLevel:
 		SetGridAreaBlockLevel();
 		break;
@@ -103,7 +112,7 @@ void AGameGridGenerator::DoWorkFlow()
 	case Enum_GameGridGeneratorState::FindGridFlyingIsland:
 		FindGridFlyingIsland();
 		break;
-	case Enum_GameGridGeneratorState::AddInstances:
+	case Enum_GameGridGeneratorState::AddGridInstances:
 		AddGridInstances();
 		break;
 	case Enum_GameGridGeneratorState::Done:
@@ -121,7 +130,7 @@ void AGameGridGenerator::DoWorkFlow()
 void AGameGridGenerator::InitWorkflow()
 {
 	FTimerHandle TimerHandle;
-	if (!GetGameInstance()) {
+	if (!GetGameInstance() || !InitTree()) {
 		WorkflowState = Enum_GameGridGeneratorState::Error;
 		GetWorldTimerManager().SetTimer(TimerHandle, WorkflowDelegate, DefaultTimerRate, false);
 		return;
@@ -147,6 +156,16 @@ bool AGameGridGenerator::GetGameInstance()
 	return false;
 }
 
+bool AGameGridGenerator::InitTree()
+{
+	if (TreeGenerator) {
+		TreeGenerator->CreateTerrainTypeTrees();
+		return true;
+	}
+	UE_LOG(GameGridGenerator, Warning, TEXT("Set AGameGridTreeGenerator first!"));
+	return false;
+}
+
 void AGameGridGenerator::InitProgress()
 {
 	ProgressPassed = 0.f;
@@ -159,7 +178,10 @@ void AGameGridGenerator::InitLoopData()
 	FlowControlUtility::InitLoopData(CreateGridPointsLoopData);
 	FlowControlUtility::InitLoopData(SetGridPosZLoopData);
 	FlowControlUtility::InitLoopData(CalGridNormalLoopData);
+
 	FlowControlUtility::InitLoopData(SetGridTTLoopData);
+	FlowControlUtility::InitLoopData(SetGridTTEdgeLoopData);
+	FlowControlUtility::InitLoopData(AddTreeInstancesLoopData);
 
 	FlowControlUtility::InitLoopData(SetGridAreaBlockLevelLoopData);
 	FlowControlUtility::InitLoopData(SetGridAreaBlockLevelExLoopData);
@@ -395,7 +417,7 @@ void AGameGridGenerator::SetGridTT()
 {
 	if (GameGridPointsLoopFunction(nullptr, [this](int32 i) { SetTileTT(i); },
 		SetGridTTLoopData,
-		Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
+		Enum_GameGridGeneratorState::SetGridTTEdge,
 		true, ProgressWeight_SetGridTT)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("Set grid terrain type done!"));
 	}
@@ -405,7 +427,151 @@ void AGameGridGenerator::SetTileTT(int32 Index)
 {
 	FVector2D Pos2D = GetPointPosition2D(Index);
 	FStructGameGridPointData& Data = GameGridPointsData[Index];
-	Data.TerrainType = pTG->GetTerrainType(Pos2D);
+	float Moisture;
+	float Temperature;
+	Data.TerrainType = pTG->GetTerrainType(Pos2D, Moisture, Temperature);
+}
+
+void AGameGridGenerator::SetGridTTEdge()
+{
+	if (GameGridPointsLoopFunction([this]() { InitSetGridTTEdge(); },
+		[this](int32 i) { SetTileTTEdgeByNeighbors(i); },
+		SetGridTTEdgeLoopData,
+		Enum_GameGridGeneratorState::AddTreeInstances,
+		true, ProgressWeight_SetGridTTEdge)) {
+		UE_LOG(GameGridGenerator, Log, TEXT("Set grid terrain type edge done!"));
+	}
+}
+
+void AGameGridGenerator::InitSetGridTTEdge()
+{
+	TTEdgeLevelMax = pGI->GameGridParam.NeighborRange + 1;
+}
+
+void AGameGridGenerator::SetTileTTEdgeByNeighbors(int32 Index)
+{
+	FStructGameGridPointData& Data = GameGridPointsData[Index];
+	for (int32 i = 0; i < GetPointNeighborNum(Index); i++)
+	{
+		if (SetTileTTEdgeByNeighbor(Index, i)) {
+			return;
+		}
+	}
+	Data.TerrainTypeEdgeRatio = 1.0f;
+}
+
+bool AGameGridGenerator::SetTileTTEdgeByNeighbor(int32 Index, int32 NeighborRangeIndex)
+{
+	FStructGameGridPointData& Data = GameGridPointsData[Index];
+	FStructGridDataNeighbors& Neighbors = pGI->GameGridPoints[Data.GridDataIndex].Neighbors[NeighborRangeIndex];
+
+	int32 TileIndex;
+	for (int32 i = 0; i < Neighbors.Points.Num(); i++)
+	{
+		FIntPoint key = Neighbors.Points[i];
+		if (!GameGridPointsIndices.Contains(key)) {
+			continue;
+		}
+		TileIndex = GameGridPointsIndices[key];
+		if (SetTileTTEdgeLevel(Index, TileIndex, Neighbors.Radius))
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+bool AGameGridGenerator::SetTileTTEdgeLevel(int32 Index, int32 CheckIndex, int32 Level)
+{
+	bool flag = CheckTileTTEdge(Index, CheckIndex);
+	if (flag) {
+		FStructGameGridPointData& Data = GameGridPointsData[Index];
+		Data.TerrainTypeEdgeRatio = (float)Level / (float)TTEdgeLevelMax;
+	}
+	return flag;
+}
+
+bool AGameGridGenerator::CheckTileTTEdge(int32 Index, int32 CheckIndex)
+{
+	FStructGameGridPointData Data = GameGridPointsData[Index];
+	FStructGameGridPointData CheckData = GameGridPointsData[CheckIndex];
+
+	if (!CheckData.InTerrainRange
+		|| (Data.TerrainType != CheckData.TerrainType 
+			&& CheckData.TerrainType > Enum_TerrainType::WaterLevel 
+			&& CheckData.TerrainType < Enum_TerrainType::PlainLevel)) {
+		return true;
+	}
+
+	return false;
+}
+
+void AGameGridGenerator::AddTreeInstances()
+{
+
+	if (GameGridPointsLoopFunction([this]() { InitAddTreeInstances(); },
+		[this](int32 i) { AddTileTreeInstanceInRange(i); },
+		AddTreeInstancesLoopData,
+		Enum_GameGridGeneratorState::SetGridAreaBlockLevel,
+		true, ProgressWeight_AddTreeInstances)) {
+		UE_LOG(GameGridGenerator, Log, TEXT("AddTreeInstances done!"));
+	}
+}
+
+void AGameGridGenerator::InitAddTreeInstances()
+{
+}
+
+void AGameGridGenerator::AddTileTreeInstanceInRange(int32 Index)
+{
+	if (IsInMapRange(Index))
+	{
+		if (pTG->HasTreeAt(FVector2D(GetPointPosition2D(Index))))
+		{
+			FStructGameGridPointData& Data = GameGridPointsData[Index];
+			int32 TreeNum = GetTreeNum(Data);
+			for (int32 i = 0; i < TreeNum; i++)
+			{
+				FStructTreeRecord Record = {};
+				int32 InstanceIndex = AddTreeInstance(Index, Data, Record);
+				Data.TreeRecords.Add(Record);
+				if (InstanceIndex > 0)
+				{
+					AddTreeInstanceData(Index, InstanceIndex, Record);
+				}
+			}
+		}
+	}
+}
+
+int32 AGameGridGenerator::AddTreeInstance(int32 Index, FStructGameGridPointData& Data, FStructTreeRecord& Record)
+{
+	int32 Ret = -1;
+	if (TreeGenerator) {
+		FVector2D TreePoint2D = FMath::RandPointInCircle(pGI->GameGridParam.TileSize);
+		TreePoint2D += GetPointPosition2D(Index);
+		Ret = TreeGenerator->AddTreeByTerraintype(Data.TerrainType, Record, FVector(TreePoint2D, Data.PositionZ), bShowTree);
+		Data.TreeRecords.Add(Record);
+	}
+
+	return Ret;
+}
+
+int32 AGameGridGenerator::GetTreeNum(const FStructGameGridPointData& Data)
+{
+	float TreeDensity = pTG->GetTreeDensity(Data.TerrainType);
+	float Rand = UKismetMathLibrary::RandomFloat();
+	float ValueOnTreeNum = 1.0 - (1.0 - Data.TerrainTypeEdgeRatio) * TTEdgeLevelOnTreeNum;
+	return UKismetMathLibrary::Round(Rand * TreeDensity * ValueOnTreeNum);
+}
+
+void AGameGridGenerator::AddTreeInstanceData(int32 PointIndex, int32 InstanceIndex, const FStructTreeRecord& Record)
+{
+	FStructGameGridPointData Data = GameGridPointsData[PointIndex];
+	if (TreeGenerator) {
+		TreeGenerator->AddTreeDataByTerraintype(Data.TerrainType, Data, InstanceIndex, Record);
+	}
 }
 
 void AGameGridGenerator::SetGridAreaBlockLevel()
@@ -781,6 +947,10 @@ bool AGameGridGenerator::SetTileBuildingBlock(int32 Index, int32 CheckIndex, int
 {
 	bool flag = CheckTileBlock(CheckIndex,
 		BuildingBlockAltitudeUpperRatio, BuildingBlockAltitudeLowerRatio, BuildingBlockSlopeRatio);
+	FStructGameGridPointData CheckData = GameGridPointsData[CheckIndex];
+	if (CheckData.TreeRecords.Num() > 0) {
+		flag = true;
+	}
 	if (flag) {
 		FStructGameGridPointData& Data = GameGridPointsData[Index];
 		Data.BuildingBlockLevel = BlockLevel;
@@ -1015,7 +1185,7 @@ void AGameGridGenerator::FindGridFlyingIsland()
 	if (GameGridPointsLoopFunction(nullptr,
 		[this](int32 i) { FindTileFlyingIsLand(i); },
 		FindGridFlyingIsLandLoopData, 
-		Enum_GameGridGeneratorState::AddInstances,
+		Enum_GameGridGeneratorState::AddGridInstances,
 		true, ProgressWeight_FindGridFlyingIsland)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("FindGridFlyingIsland done!"));
 	}
@@ -1109,7 +1279,7 @@ void AGameGridGenerator::AddGridInstances()
 		[this](int32 i) { AddTileInstanceInRange(i); },
 		AddGridInstancesLoopData, 
 		Enum_GameGridGeneratorState::Done,
-		true, ProgressWeight_AddInstances)) {
+		true, ProgressWeight_AddGridInstances)) {
 		UE_LOG(GameGridGenerator, Log, TEXT("AddGridInstances done!"));
 	}
 
@@ -1287,6 +1457,8 @@ void AGameGridGenerator::AddTileInstanceDataTT(int32 TileIndex, int32 InstanceIn
 	TArray<float> CustomData = { LinearColor.R, LinearColor.G, LinearColor.B };
 	GridInstMesh->SetCustomData(InstanceIndex, CustomData, true);
 }
+
+
 
 FVector2D AGameGridGenerator::GetPointPosition2D(int32 Index)
 {

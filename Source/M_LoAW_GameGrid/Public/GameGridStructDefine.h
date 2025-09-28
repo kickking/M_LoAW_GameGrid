@@ -4,6 +4,27 @@
 #include "GameGridStructDefine.generated.h"
 
 USTRUCT(BlueprintType)
+struct FStructTreeRecord
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 SampleIndex = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	float ZScale = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly)
+	float XYScale = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector Loc = FVector(0.0f);
+
+	UPROPERTY(BlueprintReadOnly)
+	float AngleRotZ = 0.0f;
+};
+
+USTRUCT(BlueprintType)
 struct FStructGameGridPointData
 {
 	GENERATED_BODY()
@@ -55,4 +76,12 @@ struct FStructGameGridPointData
 
 	UPROPERTY(BlueprintReadOnly)
 	Enum_TerrainType TerrainType = Enum_TerrainType::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	float TerrainTypeEdgeRatio = 1.0;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FStructTreeRecord> TreeRecords = {};
+
 };
+

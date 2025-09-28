@@ -56,9 +56,11 @@ enum class Enum_TerrainGeneratorState : uint8
 UENUM(BlueprintType)
 enum class Enum_TerrainType : uint8
 {
-	Mountain,
-	ShallowWater,
+	
 	DeepWater,
+	ShallowWater,
+
+	WaterLevel,
 
 	Lava,
 	DryGrass,
@@ -69,6 +71,10 @@ enum class Enum_TerrainType : uint8
 	Gobi,
 	Tundra,
 	Snow,
+
+	PlainLevel,
+
+	Mountain,
 
 	None
 };
@@ -336,6 +342,15 @@ protected:
 	float WaterfallRadiusMax = 900.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Terrain|River|Waterfall")
 	float WaterfallRadiusStep = 30.0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float TreeRange = 0.3;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree", meta = (ClampMin = "0.0"))
+	float TreeSampleScale = 0.5;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree", meta = (ClampMin = "0.0"))
+	float TreeValueScale = 2.0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Tree")
+	TMap<Enum_TerrainType, float> TypeToTreeDensity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Material")
 	UMaterialParameterCollection* TerrainMPC;
@@ -636,10 +651,16 @@ public:
 	bool GetWaterPointByLineTrance(FVector Start, FVector End, FVector& Loc);
 
 public:
-	Enum_TerrainType GetTerrainType(FVector2D Point);
+	Enum_TerrainType GetTerrainType(FVector2D Point, float& OutMoisture, float& OutTemperature);
 private:
 	Enum_TerrainType GetPlainType(float Moisture, float Temperature);
 	int32 GetScalarStep(float Scalar, float Lower, float Upper);
+
+public:
+	bool HasTreeAt(const FVector2D& Point);
+	float GetTreeDensity(Enum_TerrainType TT);
+private:
+	float CalTree(int32 X, int32 Y);
 
 public:
 	UFUNCTION(BlueprintCallable)

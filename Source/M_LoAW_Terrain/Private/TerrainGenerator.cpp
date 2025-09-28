@@ -1367,7 +1367,8 @@ void ATerrainGenerator::AddAMTBToVertexColor(int32 Index)
 	float Y = GetPointAxialCoord(Index).Y;
 	float Moisture = CalMoisture(X, Y);
 	float Temperature = CalTemperature(X, Y);
-	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, 0.0));
+	float Tree = CalTree(X, Y);
+	VertexColors.Add(FLinearColor(ZRatioStd, Moisture, Temperature, Tree));
 	
 }
 
@@ -2103,9 +2104,11 @@ bool ATerrainGenerator::GetWaterPointByLineTrance(FVector Start, FVector End, FV
 	return GetMeshPointByLineTrance(WaterMesh, Start, End, Loc);
 }
 
-Enum_TerrainType ATerrainGenerator::GetTerrainType(FVector2D Point)
+Enum_TerrainType ATerrainGenerator::GetTerrainType(FVector2D Point, float& OutMoisture, float& OutTemperature)
 {
 	Enum_TerrainType TT = Enum_TerrainType::None;
+	OutMoisture = 0.0;
+	OutTemperature = 0.0;
 	Quad quad = Quad::PosToQuad(Point, TileSizeMultiplier);
 	float X = quad.GetCoord().X;
 	float Y = quad.GetCoord().Y;
@@ -2115,6 +2118,8 @@ Enum_TerrainType ATerrainGenerator::GetTerrainType(FVector2D Point)
 		float ZRatio = TerrainMeshPointsData[Index].PositionZRatio;
 		float Moisture = CalMoisture(X, Y);
 		float Temperature = CalTemperature(X, Y);
+		OutMoisture = Moisture;
+		OutTemperature = Temperature;
 
 		if (ZRatio > 0.001) {
 			TT = Enum_TerrainType::Mountain;
@@ -2199,6 +2204,33 @@ int32 ATerrainGenerator::GetScalarStep(float Scalar, float Lower, float Upper)
 		Ret = 1;
 	}
 	return Ret;
+}
+
+bool ATerrainGenerator::HasTreeAt(const FVector2D& Point)
+{
+	bool Ret = false;
+	Quad quad = Quad::PosToQuad(Point, TileSizeMultiplier);
+	float X = quad.GetCoord().X;
+	float Y = quad.GetCoord().Y;
+	FIntPoint key(X, Y);
+	if (TerrainMeshPointsIndices.Contains(key)) {
+		float TreeValue = CalTree(X, Y);
+		Ret = (1.0 - TreeValue) < TreeRange;
+	}
+	return Ret;
+}
+
+float ATerrainGenerator::GetTreeDensity(Enum_TerrainType TT)
+{
+	if (TypeToTreeDensity.Contains(TT)) {
+		return TypeToTreeDensity[TT];
+	}
+	return 0.0;
+}
+
+float ATerrainGenerator::CalTree(int32 X, int32 Y)
+{
+	return GetNoise2DStd(Noise->NWTree, X, Y, TreeSampleScale, TreeValueScale);
 }
 
 void ATerrainGenerator::GetDebugRiverLineEndPoints(TArray<FVector>& Points)
