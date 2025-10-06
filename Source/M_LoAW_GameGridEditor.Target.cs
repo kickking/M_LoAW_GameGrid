@@ -13,6 +13,5 @@ public class M_LoAW_GameGridEditorTarget : TargetRules
 		ExtraModuleNames.Add("M_LoAW_GameGrid");
 		ExtraModuleNames.Add("M_LoAW_GridData");
 		ExtraModuleNames.Add("M_LoAW_Terrain");
-		ExtraModuleNames.Add("M_LoAW_GameBase");
 	}
 }

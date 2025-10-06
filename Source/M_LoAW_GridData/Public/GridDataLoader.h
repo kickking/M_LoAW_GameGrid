@@ -49,7 +49,7 @@ protected:
 	int32 ProgressPassed = 0;
 	int32 ProgressCurrent = 0;
 
-	class ULoAWGameInstance* pGI;
+	class UGridDataGameInstance* pGI;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom|Loop")

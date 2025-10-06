@@ -32,14 +32,6 @@
 				"Engine",
 				"CoreUObject"
 			]
-		},
-		{
-			"Name": "M_LoAW_GameBase",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine"
-			]
 		}
 	],
 	"Plugins": [

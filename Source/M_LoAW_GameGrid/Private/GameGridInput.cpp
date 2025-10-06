@@ -2,13 +2,13 @@
 
 
 #include "GameGridInput.h"
-#include "M_LoAW_GameBase/Public/LoAWGameInstance.h"
 #include "M_LoAW_Terrain/Public/TerrainInput.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameGridGenerator.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "M_LoAW_GridData/Public/Hex.h"
+#include "M_LoAW_GridData/Public/GridDataGameInstance.h"
 
 DEFINE_LOG_CATEGORY(GameGridInput);
 
@@ -45,7 +45,7 @@ bool AGameGridInput::GetGameInstance()
 {
 	UWorld* world = GetWorld();
 	if (world) {
-		pGI = Cast<ULoAWGameInstance>(world->GetGameInstance());
+		pGI = Cast<UGridDataGameInstance>(world->GetGameInstance());
 		if (pGI && pGI->hasGameGridLoaded) {
 			return true;
 		}

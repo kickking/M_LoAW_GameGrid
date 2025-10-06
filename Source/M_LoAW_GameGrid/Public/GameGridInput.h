@@ -17,7 +17,7 @@ private:
 	//Delegate
 	FTimerDynamicDelegate CheckMouseOverDelegate;
 
-	class ULoAWGameInstance* pGI;
+	class UGridDataGameInstance* pGI;
 	class AGameGridGenerator* pGG;
 	class ATerrainInput* pTI;
 

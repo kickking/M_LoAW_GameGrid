@@ -3,9 +3,10 @@
 
 #include "GridDataLoader.h"
 #include "FlowControlUtility.h"
+#include "GridDataGameInstance.h"
 #include <string>
 #include <kismet/KismetStringLibrary.h>
-#include "M_LoAW_GameBase/Public/LoAWGameInstance.h"
+
 
 DEFINE_LOG_CATEGORY(GridDataLoader);
 
@@ -103,7 +104,7 @@ bool AGridDataLoader::GetGameInstance()
 {
 	UWorld* world = GetWorld();
 	if (world) {
-		pGI = Cast<ULoAWGameInstance>(world->GetGameInstance());
+		pGI = Cast<UGridDataGameInstance>(world->GetGameInstance());
 		if (pGI) {
 			return true;
 		}

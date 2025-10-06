@@ -2,7 +2,6 @@
 
 
 #include "TerrainGenerator.h"
-#include "M_LoAW_GameBase/Public/LoAWGameInstance.h"
 #include "TerrainNoise.h"
 #include "ProceduralMeshComponent.h"
 #include "M_LoAW_GridData/Public/FlowControlUtility.h"
@@ -10,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "M_LoAW_GridData/Public/Quad.h"
 #include "AStarUtility.h"
+#include "M_LoAW_GridData/Public/GridDataGameInstance.h"
 
 DEFINE_LOG_CATEGORY(TerrainGenerator);
 
@@ -134,7 +134,7 @@ bool ATerrainGenerator::GetGameInstance()
 {
 	UWorld* world = GetWorld();
 	if (world) {
-		pGI = Cast<ULoAWGameInstance>(world->GetGameInstance());
+		pGI = Cast<UGridDataGameInstance>(world->GetGameInstance());
 		if (pGI && pGI->hasTerrainGridLoaded) {
 			return true;
 		}

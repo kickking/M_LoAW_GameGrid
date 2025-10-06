@@ -69,7 +69,7 @@ private:
 	//Delegate
 	FTimerDynamicDelegate WorkflowDelegate;
 
-	class ULoAWGameInstance* pGI;
+	class UGridDataGameInstance* pGI;
 
 	Enum_GameGridGeneratorState WorkflowState = Enum_GameGridGeneratorState::InitWorkflow;
 

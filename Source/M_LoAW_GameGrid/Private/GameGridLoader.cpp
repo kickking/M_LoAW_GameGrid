@@ -3,7 +3,7 @@
 
 #include "GameGridLoader.h"
 #include <kismet/KismetStringLibrary.h>
-#include "M_LoAW_GameBase/Public/LoAWGameInstance.h"
+#include "M_LoAW_GridData/Public/GridDataGameInstance.h"
 
 DEFINE_LOG_CATEGORY(GameGridLoader);
 

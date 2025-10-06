@@ -2,10 +2,10 @@
 
 
 #include "GameGridGenerator.h"
-#include "M_LoAW_GameBase/Public/LoAWGameInstance.h"
 #include "M_LoAW_Terrain/Public/TerrainGenerator.h"
 #include "M_LoAW_GridData/Public/Hex.h"
 #include "M_LoAW_GridData/Public/HexGridCreator.h"
+#include "M_LoAW_GridData/Public/GridDataGameInstance.h"
 #include "M_LoAW_GameGrid/Public/GameGridTerrainTypeTree.h"
 #include "M_LoAW_GameGrid/Public/GameGridTreeGenerator.h"
 
@@ -147,7 +147,7 @@ bool AGameGridGenerator::GetGameInstance()
 {
 	UWorld* world = GetWorld();
 	if (world) {
-		pGI = Cast<ULoAWGameInstance>(world->GetGameInstance());
+		pGI = Cast<UGridDataGameInstance>(world->GetGameInstance());
 		if (pGI && pGI->hasGameGridLoaded) {
 			return true;
 		}

@@ -2,17 +2,17 @@
 
 #pragma once
 
-#include "M_LoAW_GridData/Public/GridDataStructDefine.h"
+#include "GridDataStructDefine.h"
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "LoAWGameInstance.generated.h"
+#include "GridDataGameInstance.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class M_LOAW_GAMEBASE_API ULoAWGameInstance : public UGameInstance
+class M_LOAW_GRIDDATA_API UGridDataGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 

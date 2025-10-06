@@ -87,7 +87,7 @@ class M_LOAW_TERRAIN_API ATerrainGenerator : public AActor
 private:
 	FTimerDynamicDelegate WorkflowDelegate;
 
-	class ULoAWGameInstance* pGI;
+	class UGridDataGameInstance* pGI;
 
 	Enum_TerrainGeneratorState WorkflowState = Enum_TerrainGeneratorState::InitWorkflow;
 
